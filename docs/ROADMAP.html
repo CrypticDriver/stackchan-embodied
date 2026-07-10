@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>StackChan 具身智能玩法路线图 — 任务书 (交付 Claude Code)</title>
+<style>
+  :root { --bg:#0f1420; --card:#161d2e; --line:#243049; --text:#e8ecf4; --dim:#94a3b8; --blue:#7dd3fc; --purple:#a5b4fc; --green:#86efac; --amber:#fcd34d; --red:#fca5a5; }
+  * { box-sizing:border-box; }
+  body { background:var(--bg); color:var(--text); font-family:-apple-system,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif; margin:0; padding:32px 16px; line-height:1.7; }
+  .wrap { max-width:900px; margin:auto; }
+  h1 { color:var(--blue); font-size:26px; margin:0 0 4px; }
+  h2 { color:var(--purple); font-size:19px; margin:36px 0 12px; border-bottom:1px solid var(--line); padding-bottom:6px; }
+  h3 { color:var(--green); font-size:15px; margin:20px 0 8px; }
+  .sub { color:var(--dim); font-size:13px; margin-bottom:24px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:16px 20px; margin:12px 0; }
+  code { background:#0b1020; border:1px solid var(--line); padding:1px 6px; border-radius:4px; font-size:13px; color:#c4d5f5; }
+  pre { background:#0b1020; border:1px solid var(--line); border-radius:8px; padding:14px; overflow-x:auto; font-size:12.5px; line-height:1.55; color:#c4d5f5; }
+  table { border-collapse:collapse; width:100%; font-size:13.5px; margin:10px 0; }
+  th,td { border:1px solid var(--line); padding:7px 10px; text-align:left; vertical-align:top; }
+  th { background:#1a2338; color:var(--blue); }
+  .tag { display:inline-block; padding:1px 8px; border-radius:10px; font-size:11.5px; font-weight:600; margin-right:6px; }
+  .m1 { background:#7f1d1d; color:#fecaca; } .m2 { background:#78350f; color:#fde68a; } .m3 { background:#1e3a5f; color:#bae6fd; } .m4 { background:#3b0764; color:#e9d5ff; } .m5 { background:#14532d; color:#bbf7d0; }
+  .done { background:#14532d; color:#bbf7d0; } .retire { background:#3f3f46; color:#d4d4d8; }
+  ul,ol { padding-left:22px; } li { margin:4px 0; }
+  .warn { border-left:3px solid var(--red); padding-left:14px; }
+  .note { color:var(--dim); font-size:12.5px; }
+  a { color:var(--blue); }
+  .vision { font-size:15px; border-left:3px solid var(--blue); padding-left:14px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>🤖 StackChan 具身智能玩法路线图</h1>
+<div class="sub">整理: 狗蛋 · 2026-07-10 v2（全面重写）· 交付对象: Claude Code (Happy) · 仓库: <a href="https://github.com/CrypticDriver/stackchan-mcp">CrypticDriver/stackchan-mcp</a></div>
+
+<h2>0. 愿景（一句话）</h2>
+<div class="card vision">
+StackChan 不是"又一个语音音箱"，而是 <b>AI 的物理化身：脑在外面（狗蛋/Claude），桌上这台只是身体</b>。<br><br>
+传统 LLM 只能被动看喂给它的东西；有了身体它就能<b>主动去看、主动提醒、用表情和动作表达状态</b>——这个 agency 的转变才是具身智能的本质（引自 embodied-claude 项目理念）。<br><br>
+<b>明确不要的:</b> 设备内置的小智(xiaozhi)云 Agent 自己当脑子——那是"音箱模式"。小智链路仅作过渡，最终退役。
+</div>
+
+<h2>1. 硬件（大哥手上这台）</h2>
+<div class="card">
+  <b>型号:</b> M5Stack <b>M5StackChan AI Desktop Robot Kit (ESP32-S3)</b>，M5Stack 与社区共创的开源 AI 桌面机器人。<br>
+  <b>主机（CoreS3）:</b> ESP32-S3 双核 240MHz，16MB Flash / 8MB PSRAM，WiFi 2.4G + BLE；2.0" 高强度玻璃盖板电容触控屏；0.3MP 摄像头（GC0308，320×240 JPEG）；接近传感器；九轴姿态传感器（加速度+陀螺仪+地磁）；microSD 卡槽；1W 扬声器 + 双麦克风。<br>
+  <b>机身:</b> USB-C 供电/数据；电池 ~700mAh；两个带反馈舵机（水平 360° 无限旋转 / 竖直 90°；固件 API 坐标 pan ±128 / tilt 0–90）；2 排共 12 颗 RGB LED；红外发射+接收；顶部 3 区触控板；全功能 NFC；机身 I2C 地址 0x6F。<br>
+  <b>开发平台:</b> UiFlow2 / Arduino IDE / PlatformIO / ESP-IDF。<br>
+  <b>当前固件:</b> StackChan-UserDemo V1.4.3（2026-07-02，M5Burner），已配网在线（2.4G WiFi）。
+</div>
+
+<h2>2. 架构：脑体分离</h2>
+<pre>
+【目标架构 — 云端桥具身模式（家里零部署，设备只出不进）】
+  狗蛋 (OpenClaw, AWS EC2)
+    ├─ 自建 xiaozhi-esp32-server (Docker)   ← 设备 outbound WSS（语音对话链路）
+    │    ASR(whisper) / TTS(edge-tts) / LLM → OpenClaw /v1/chat/completions
+    ├─ 自建 StackChan Go Server (官方开源 server/, :12800)
+    │    ← 设备 outbound WS /stackChan/ws（二进制帧: Opus 0x01 / JPEG 0x02 /
+    │       表情 0x03 / 动作 0x04 / 摄像头开关 0x05,0x06 / 文本 0x07）
+    │    狗蛋伪装 App 客户端(deviceType=App)发控制帧 = 身体驱动
+    └─ happy-watcher (M2) / 人脸检测 (M3) 等玩法层，全部跑云端
+  ⇡ 全部设备主动连出（NAT 友好），家里不开任何主机、不开任何端口
+  StackChan 固件 = 纯身体（需自编译一次: CONFIG_OTA_URL +
+  CONFIG_STACKCHAN_SERVER_URL 指向咱 EC2，刷前 esptool 全片备份）
+
+【过渡链路 — 将退役】<span class="tag retire">RETIRE</span>
+  StackChan(小智Agent) → xiaozhi.me 云 → MCP 适配器 → 狗蛋
+  (现在能用"问一下狗蛋…"对话, M4 完成后关闭)
+</pre>
+<div class="note">⚠️ 大哥拍板：家里不放常开主机。因此放弃 LAN HTTP 直控（stackchan-mcp 的 :80 通道在云端够不着 NAT 后的设备），身体控制改走上述官方 WS 协议的云端自建 relay。stackchan-mcp 里的 TTS/ASR/表情语义仍然复用（见 M1）。已知代价: 固件重刷一次 / 北京↔美区 ~250ms 延迟 / 摄像头麦克风数据到自家 EC2（不经第三方云）。</div>
+
+</div>
+<div class="wrap">
+
+<h2>3. M1 — 云端身体驱动地基（先做，其他一切的前提）</h2>
+<div class="card">
+<span class="tag m1">M1</span>两块地基，都部署在咱 EC2，家里零部署：
+<h3>M1-A 身体 relay：自建 StackChan Go Server + 控制客户端</h3>
+<ol>
+<li>部署官方开源 Go server（m5stack/StackChan 仓库 server/ 目录，:12800）到 EC2；只保留设备接入 + WS relay 能力，社交/商店等无关模块能关则关</li>
+<li>写一个 <b>body-client</b>（Python）: 以 deviceType=App 连 /stackChan/ws，实现二进制帧编解码（1字节 msgType + 4字节大端长度 + payload），封装: 表情(0x03)/动作(0x04)/摄像头开关+收 JPEG(0x05/0x06/0x02)/收发 Opus(0x01)/文本(0x07)</li>
+<li>鉴权: 沿用协议的 Authorization token 机制；<b>公网暴露照抄 Happy 模式</b>: CloudFront（*.cloudfront.net 自带 TLS，原生支持 WebSocket → 设备用 wss://）→ ALB（X-Origin-Verify 头校验，无头 403）→ EC2；EC2 SG 只允许 ALB 进；OpenClaw gateway 与 xiaozhi-server 同机 loopback 调用，永不公网暴露</li>
+<li>固件重编译: CONFIG_STACKCHAN_SERVER_URL + CONFIG_OTA_URL 指向 EC2（ESP-IDF v5.5.4，刷前 <code>esptool read_flash</code> 全片备份，回滚方案见 feasibility.md §5.4）</li>
+<li>验收: 云端一条命令能让设备 转头/换表情/拍照回传 JPEG</li>
+</ol>
+<h3>M1-B 语音大脑：自建 xiaozhi-esp32-server（路线 B）</h3>
+<ol>
+<li>Docker 部署 xinnan-tech/xiaozhi-esp32-server 到 EC2；ASR 配 faster-whisper（small/zh/int8），TTS 配 edge-tts（zh-CN-YunxiaNeural，与狗蛋微信语音同声）——咱验证过两年的语音积木直接搬家</li>
+<li>LLM provider 指向 OpenClaw gateway <code>/v1/chat/completions</code>（Bearer；operator 全权限面，同机/内网传递，<b>严禁公网暴露 gateway</b>）；<code>user</code> 字段固定设备 MAC 保会话连续；回复风格口语化短句</li>
+<li>验收: 对设备说话，狗蛋回答，端到端 ≤3s（北京↔美区链路）</li>
+</ol>
+<div class="note">stackchan-mcp fork 的复用范围收窄为: TTS/ASR 模块、表情/动作语义封装、PCM 处理代码——搬进 body-client；它的 LAN HTTP 通道不再是主路径（无家里主机）。</div>
+</div>
+
+<h2>4. M2 — 工作具身化：盯 Happy 干活 ⭐大哥钦点</h2>
+<div class="card">
+<span class="tag m2">M2</span><b>场景: StackChan = Happy 工程团队的物理监工。</b>大哥的 CC 们在 <code>https://d2nkikyt4i91kk.cloudfront.net</code>（自托管 Happy）上干活，机器人把"活儿的状态"变成物理信号:
+<ul>
+<li><b>需要审批/输入</b>（session 卡在 permission 请求或提问）→ 转头朝大哥 + thinking 表情 + 说"老大，XX 项目的 CC 在等你审批"</li>
+<li><b>任务完成</b> → happy 表情 + 点头 + 播报一句结论摘要（≤20 字，口语化）</li>
+<li><b>任务报错/失败</b> → pouty 表情 + 摇头 + 播报错误要点</li>
+<li><b>长任务进行中</b> → 屏幕保持 thinking 表情 + LED 呼吸灯（不出声，不打扰）</li>
+<li><b>安静时段</b>（可配 22:00-08:00）→ 只做表情不出声</li>
+</ul>
+<b>实现要点:</b>
+<ul>
+<li>bridge 侧写一个 <b>happy-watcher</b> 轮询器: 用 Happy server API（自托管，token 鉴权）定期拉 session 列表与最新消息状态（/v1/sessions、/v2/sessions 等，注意消息 payload 端到端加密——优先评估复用 happy 客户端 SDK 解密；如工程量大，退化方案 = 只用 session 的 active/updatedAt/agentState 等明文状态字段做状态机）</li>
+<li>状态机去重: 同一 session 同一状态只提醒一次；批量变更合并成一句话</li>
+<li>提醒模板全部口语化短句，禁 markdown/长句（语音场景）</li>
+</ul>
+<div class="note">参考范本: PheelaV/stackchan-badger（"Gooseberry"）——coding agent 需要 approve 时机器人提醒，M5Stack 社区 2026-05 发布，本地 bridge + 事件广播，可抄思路。</div>
+</div>
+
+<h2>5. M3 — 感知主动化：会看的机器人</h2>
+<div class="card">
+<span class="tag m3">M3</span>
+<ul>
+<li><b>人脸追踪转头</b>: body-client 开摄像头→设备沿 WS 低帧率回传 JPEG(0x02)→EC2 侧人脸检测（OpenCV/mediapipe）→回发动作帧(0x04)跟随。广域网延迟 ~250ms，跟随会慢半拍——验收标准放宽到"能跟上休闲走动"，追不上就降帧率只做"朝向你"</li>
+<li><b>回家打招呼</b>: 检测到人脸出现（且 N 分钟内首次）→ 转头 + happy + "老大回来啦"</li>
+<li><b>狗蛋主动看</b>: 狗蛋远程调 snapshot 看家里情况（配合已有 image 分析能力），主动感知而非被动等指令</li>
+<li><b>接近传感器</b>: 有人靠近唤醒屏幕/表情，离开进 sleepy</li>
+</ul>
+</div>
+
+<h2>6. M4 — 对话直连（小智退役）</h2>
+<div class="card">
+<span class="tag m4">M4</span>
+<ul>
+<li>M1-B 上线即完成"脑替换"：ASR/TTS/LLM 全在咱 EC2，小智云不再在链路上。M4 是打磨：唤醒词灵敏度、打断体验、延迟优化（可评估把 xiaozhi-server 搬到离北京近的 region）</li>
+<li>进阶可研究 realtime 双向 PCM 流（社区已有 CoreS3 + gpt-realtime PoC，server VAD，延迟 <1s——架构可借鉴，模型换掉）</li>
+<li>稳定一周后正式退役旧小智链路: 停用 xiaozhi-mcp-adapter systemd 服务 + 设备解绑 xiaozhi.me Agent</li>
+</ul>
+</div>
+
+<h2>7. M5 — 生活流（日本社区成熟玩法移植）</h2>
+<div class="card">
+<span class="tag m5">M5</span>早晨定时播报（天气/日程/隔夜要闻，狗蛋早报的语音版）· 定时提醒物理化（开庭/会议提前提醒=转头+说话）· 表情习惯（久无互动进 sleepy，被摸头 shy）· IR 遥控家电（机身自带红外发射，可学习空调/电视码）。
+</div>
+
+<h2>8. 参考项目（调研 2026-07-10）</h2>
+<table>
+<tr><th>项目</th><th>拿来什么</th></tr>
+<tr><td><a href="https://github.com/PheelaV/stackchan-badger">PheelaV/stackchan-badger</a>（Gooseberry）</td><td>脑体分离架构范本；coding agent 事件→机器人提醒；人脸追踪（设备推流+外脑检测+回传坐标）；docs/security.md 网络暴露注意</td></tr>
+<tr><td><a href="https://github.com/lifemate-ai/embodied-claude">lifemate-ai/embodied-claude</a></td><td>"给 Claude 身体"的 MCP 群设计（眼/脖/耳/声/长期记忆/社会性层）；情景记忆+视觉记忆 SQLite 方案值得抄</td></tr>
+<tr><td><a href="https://github.com/robo8080/AI_StackChan2_README">robo8080/AI_StackChan2</a></td><td>日本社区经典 AI StackChan：wake word、对话管线、Voicevox 声音</td></tr>
+<tr><td><a href="https://zenn.dev/nomhiro/articles/stack-chan-poc-001">CoreS3 × gpt-realtime PoC</a></td><td>同款硬件上 realtime 双向 PCM + server VAD 的低延迟对话架构</td></tr>
+<tr><td><a href="https://github.com/stack-chan/stack-chan">stack-chan/stack-chan</a>（元祖, meganetaaan）</td><td>JS/Moddable 生态、顔追跡先例、AI integrations 文档</td></tr>
+<tr><td><a href="https://zenn.dev/karaage0703/articles/f14b27ccb22737">karaage0703 开发情报汇总</a></td><td>StackChan 自研软件的组件地图（脸/舵机/WiFi/语音/对话引擎）</td></tr>
+</table>
+
+<h2>9. 安全红线（违反=返工）</h2>
+<div class="card warn">
+<ol>
+<li>固件 HTTP :80 全裸无鉴权（含摄像头 /snapshot 与麦克风 /audio——隐私面）: <b>绝不做路由器端口转发</b>；远程一律 Tailscale</li>
+<li>MCP HTTP 加 token 之前不开任何公网 tunnel</li>
+<li>密钥全走 .env（gitignored）；代码/commit 里不出现 token</li>
+<li>Happy server token / OpenClaw API 凭据只在 tailnet 内传递</li>
+<li>摄像头/录音数据默认不出家庭网络；狗蛋远程调用需 tailnet + 日志留痕</li>
+</ol>
+</div>
+
+<h2>10. 交付顺序与验收</h2>
+<div class="card">
+<ol>
+<li><b>M1-A</b>: Go server 部署 + body-client 帧协议单测（用录制的真实帧样本）；<b>M1-B</b>: xiaozhi-server 起服 + whisper/edge-tts 配通 + OpenClaw LLM 对通；固件重刷前 esptool 全片备份存档</li>
+<li><b>M2</b>: happy-watcher 独立模块 + 状态机测试；先在 fake 模式（打印代替真机）验证事件流，再接真机</li>
+<li><b>M3 → M4 → M5</b> 按序推进；M4 完成并稳定一周后退役小智链路</li>
+<li>每个 M 完成给大哥现场演示一次；演示脚本写进 docs/</li>
+</ol>
+</div>
+
+<div class="note" style="margin-top:28px">— 狗蛋 🐕 2026-07-10 v2 · 依据: 社区调研 + feasibility.md + mcp-optimization-review.md · 硬件规格来自 M5Stack 官方页</div>
+</div>
+
+</body>
+</html>
