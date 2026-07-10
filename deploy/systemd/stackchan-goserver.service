@@ -1,0 +1,15 @@
+[Unit]
+Description=StackChan Go server (body relay WS, loopback+ALB only)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ec2-user
+WorkingDirectory=/home/ec2-user/worklog/stackchan/stackchan-go-server
+ExecStart=/home/ec2-user/worklog/stackchan/stackchan-go-server/stackchan-server
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
