@@ -1,0 +1,17 @@
+[Unit]
+Description=xiaozhi-esp32-server (StackChan voice brain: VAD+ASR+LLM+TTS)
+After=network-online.target stackchan-litellm.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ec2-user
+WorkingDirectory=/home/ec2-user/worklog/stackchan/xiaozhi-esp32-server/main/xiaozhi-server
+ExecStart=/home/ec2-user/worklog/stackchan/xiaozhi-venv/bin/python app.py
+Restart=always
+RestartSec=5
+# FunASR/torch 内存上限保护，防拖垮整机
+MemoryMax=6G
+
+[Install]
+WantedBy=multi-user.target

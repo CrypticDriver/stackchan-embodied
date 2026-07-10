@@ -1,0 +1,17 @@
+[Unit]
+Description=LiteLLM proxy (StackChan brain LLM endpoint, loopback only)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ec2-user
+EnvironmentFile=/home/ec2-user/worklog/stackchan/.env-litellm
+ExecStart=/home/ec2-user/worklog/stackchan/litellm-venv/bin/litellm \
+  --config /home/ec2-user/worklog/stackchan/stackchan-embodied/deploy/litellm/config.yaml \
+  --host 127.0.0.1 --port 4000
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

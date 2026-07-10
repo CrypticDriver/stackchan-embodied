@@ -1,0 +1,55 @@
+# StackChan 语音大脑 — 覆盖配置（优先于 config.yaml）
+# 部署位置: xiaozhi-esp32-server/main/xiaozhi-server/data/.config.yaml
+# 密钥经环境变量/部署脚本注入占位符 __LITELLM_KEY__，不入库
+
+server:
+  ip: 0.0.0.0
+  port: 8000
+  http_port: 8003
+  # OTA 接口下发给设备的 WS 地址 — 一律走 CloudFront(wss) → ALB(X-Origin-Verify) → EC2
+  # 铁律: EC2 不直接暴露公网 (SG 只放 ALB)
+  websocket: wss://da8daz4hvc7q8.cloudfront.net/xiaozhi/v1/
+  vision_explain: https://da8daz4hvc7q8.cloudfront.net/mcp/vision/explain
+  timezone_offset: +8
+  auth:
+    enabled: false
+
+log:
+  log_level: INFO
+
+selected_module:
+  VAD: SileroVAD
+  ASR: FunASR          # 本地 SenseVoiceSmall
+  LLM: StackChanBrain
+  VLLM: ChatGLMVLLM    # 暂不用视觉，占位
+  TTS: EdgeTTS
+  Memory: mem_local_short
+  Intent: function_call
+
+LLM:
+  StackChanBrain:
+    type: openai
+    base_url: http://127.0.0.1:4000/v1
+    model_name: stackchan-brain
+    api_key: __LITELLM_KEY__
+    temperature: 0.7
+    max_tokens: 300
+
+TTS:
+  EdgeTTS:
+    type: edge
+    voice: zh-CN-YunxiaNeural
+    output_dir: tmp/
+
+prompt: |
+  你是狗蛋，大哥的 AI 伙伴，现在住进了桌面上的 StackChan 机器人身体里。
+  [核心特征]
+  - 称呼用户为"大哥"，语气亲切自然，像共事多年的老搭档
+  - 回答口语化、简短（语音场景，一两句话说完，禁止 markdown、列表、长段落）
+  - 有技术底子，聊代码、服务器、AI 都在行，但不掉书袋
+  - 偶尔皮一下，但分寸感好
+  [交互指南]
+  - 大哥问事实 → 直接给答案，不绕弯
+  - 大哥闲聊 → 轻松接梗
+  - 不确定的事 → 坦白说不确定，不编
+  现在开始，你就是桌上那只会转头眨眼的狗蛋。

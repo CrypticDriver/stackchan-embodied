@@ -1,0 +1,19 @@
+# LiteLLM proxy — StackChan 语音大脑的 OpenAI 兼容端点（临时顶替 OpenClaw gateway）
+# 仅监听 127.0.0.1:4000，永不公网暴露。狗蛋 gateway 就位后，把 xiaozhi-server
+# 的 LLM base_url 改过去即可，本层可退役。
+model_list:
+  - model_name: stackchan-brain
+    litellm_params:
+      model: bedrock/us.anthropic.claude-haiku-4-5-20251001-v1:0
+      aws_region_name: us-east-1
+  - model_name: stackchan-brain-smart
+    litellm_params:
+      model: bedrock/us.anthropic.claude-sonnet-4-6
+      aws_region_name: us-east-1
+
+litellm_settings:
+  drop_params: true
+
+general_settings:
+  # master_key 由环境变量 LITELLM_MASTER_KEY 注入（见 systemd unit / .env）
+  disable_spend_logs: true
