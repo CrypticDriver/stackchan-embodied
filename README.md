@@ -14,20 +14,21 @@
 
 ```
 狗蛋 (OpenClaw, AWS EC2)
-  ├─ xiaozhi-esp32-server (自建, 语音: whisper 耳 + edge-tts 声 + LLM=OpenClaw)
+  ├─ xiaozhi-esp32-server (自建, 语音: FunASR 耳 + edge-tts 声 + LLM=OpenClaw)
   ├─ StackChan Go Server (官方开源 server/, 身体 relay, 设备 outbound WS)
   │    body-client 伪装 App 发二进制控制帧: 表情/动作/摄像头/音频
   └─ 玩法层: happy-watcher(盯 CC 干活) / 人脸追踪 / 生活流
         ⇡ 全部设备主动连出 (CloudFront wss → ALB → EC2)
-StackChan 固件 = 纯身体 (重编译一次: 两个 URL 指向自建端点)
+StackChan 固件 = 纯身体 (语音链路免刷: 配网门户改 OTA 地址;
+身体链路重编译刷一次: sdkconfig.defaults.local 覆盖 SERVER_URL, 详见 docs/firmware-repoint.md)
 ```
 
 ## 里程碑
 
 | M | 内容 | 状态 |
 |---|------|------|
-| M1-A | 身体 relay: Go server 部署 + body-client 帧协议 | ⬜ |
-| M1-B | 语音大脑: xiaozhi-esp32-server + whisper/edge-tts + OpenClaw LLM | ⬜ |
+| M1-B | 语音大脑(先行, 零刷机): xiaozhi-esp32-server + FunASR/edge-tts + OpenClaw LLM, 配网门户改 OTA 地址即切 | ⬜ |
+| M1-A | 身体 relay(需刷机一次): Go server 部署 + RSA 密钥 + secret_logic 补全 + body-client 帧协议 | ⬜ |
 | M2 | 工作具身化: 盯 Happy (CC 等审批→转头喊人, 完成→点头播报) | ⬜ |
 | M3 | 感知主动化: 人脸追踪 / 回家打招呼 / 主动看家 | ⬜ |
 | M4 | 对话打磨 + 退役小智云链路 | ⬜ |
