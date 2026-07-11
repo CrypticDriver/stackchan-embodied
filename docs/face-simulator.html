@@ -29,7 +29,7 @@
 <body>
 <div class="wrap">
 <h1>🤖 StackChan 表情模拟器</h1>
-<div class="sub">渲染数学 1:1 取自固件 <code>skins/default/eyes.cpp + mouth.cpp</code>（320×240 屏，几何常量与 map_range 完全一致）· 情绪预设参数来自固件 <code>setEmotion()</code> 源码 · 下方 JSON 即 body-client <code>emotion()</code> 实际发送的 payload</div>
+<div class="sub">🍮 <b style="color:#7dd3fc">goudan skin（果冻高光眼）</b> — 渲染数学 1:1 取自固件 <code>skins/goudan/eyes.cpp + mouth.cpp</code>（320×240 屏）· 内置情绪 = goudan <code>setEmotion()</code> 原参数 · 下方 JSON 即 body-client <code>emotion()</code> 实际发送的 payload</div>
 
 <div class="row">
   <div class="card">
@@ -84,9 +84,8 @@
   <b style="color:var(--blue);font-size:13px">body-client 发送的 payload（0x03 ControlAvatar）</b>
   <pre id="json"></pre>
   <div class="note">
-    * wink/惊讶 非固件预设，是用同一套参数组合出来的自定义表情——证明 0x03 通道能做的比 6 个内置情绪多得多。<br>
-    固件映射关系：eye.weight 0→100 = 眼睑全遮→全开 · eye.size -100→100 = 瞳孔 8→32px · eye.rotation 单位 0.1°（Happy=1550 即 155°，眼睑斜切出月牙眼）· mouth.weight 0→100 = 90×6 扁条→60×50 圆角张嘴（radius 0→16）· 位置 ±100 = 物理 ±16px 偏移。<br>
-    内置情绪参数逐字来自固件源码：Happy(72,155°) Angry(70,45°) Sad(70,-40°) Doubt(75,0) Sleepy(35,-5°)；嘴的开合由语音链路 TTS 音量实时驱动（说话动画按钮模拟的就是这个）。
+    goudan skin 映射：eye.weight 0→100 = 眼睑全遮→全开 · eye.size -100→100 = 眼球 44→76px（高光缺口按比例跟随）· eye.rotation 单位 0.1° · <b>mouth.weight 0→49 = 弧线微笑（越大笑得越开），50→100 = 圆角张嘴</b> · 位置 ±100 = 物理 ±16px。<br>
+    Angry/Sad 在固件里弧线会倒扣成撇嘴（模拟器用近似表示）；嘴的开合由语音链路 TTS 音量实时驱动（说话动画按钮模拟的就是这个）；💤 待机动画 = 固件 IdleLifeModifier 同款节奏（眨眼/瞳孔漂移/嘴部微动）。
   </div>
 </div>
 </div>
@@ -96,37 +95,49 @@ const $ = id => document.getElementById(id);
 const S = { lx:0,ly:0,lw:100,lr:0,ls:0, rx:0,ry:0,rw:100,rr:0,rs:0, mx:0,my:0,mw:0,mr:0 };
 const map = (v,a,b,c,d) => Math.round(c + (v-a)*(d-c)/(b-a));
 
-// —— 固件几何常量 (eyes.cpp / mouth.cpp 原值) ——
-const EYE = { pos:[-70,-16], off:16, szMin:8, szMax:32 };
-const MOUTH = { pos:[0,26], off:16, szMin:[90,6], szMax:[60,50], rMin:0, rMax:16 };
+// —— goudan skin 几何常量 (skins/goudan/eyes.cpp / mouth.cpp 原值) ——
+const EYE = { pos:[-70,-20], off:16, szMin:44, szMax:76 };            // 果冻大圆眼
+const MOUTH = { pos:[0,42], off:16, arcMin:56, arcMax:96, arcW:9, openMin:26, openMax:56 };
 
 function drawEye(ctx, isLeft, x, y, w, rotDeci, size) {
   const px = (isLeft ? EYE.pos[0] : -EYE.pos[0]) + map(x,-100,100,-EYE.off,EYE.off);
   const py = EYE.pos[1] + map(y,-100,100,-EYE.off,EYE.off);
-  const d  = map(size,-100,100,EYE.szMin,EYE.szMax);       // 瞳孔直径
-  const lidY = -map(w,0,100,0,d);                          // 眼睑位移 (weight)
+  const d  = map(size,-100,100,EYE.szMin,EYE.szMax);       // 眼球直径
+  const lid = map(100-w,0,100,0,d);                        // 眼睑遮挡高度
   ctx.save();
   ctx.translate(160+px, 120+py);
   ctx.rotate(rotDeci/10 * Math.PI/180 * (isLeft?1:-1) * -1); // 固件右眼取反
-  // 瞳孔（白）
+  // 眼球（白圆）
   ctx.beginPath(); ctx.arc(0, 0, d/2, 0, 7); ctx.fillStyle='#fff'; ctx.fill();
-  // 眼睑（黑, 方形, 从上方压下来）
+  // 高光缺口（黑色小圆, 右上, "湿润反光"）
+  const hd = d*0.22, hx = d*0.22, hy = -d*0.24;
+  ctx.beginPath(); ctx.arc(hx, hy, hd/2, 0, 7); ctx.fillStyle='#000'; ctx.fill();
+  // 眼睑（黑, 从上向下遮挡）
   ctx.fillStyle='#000';
-  ctx.fillRect(-d/2-1, -d/2 + (d+lidY) - d, d+2, d);
+  ctx.fillRect(-d/2-2, -d/2, d+4, lid);
   ctx.restore();
 }
 
 function drawMouth(ctx, x, y, w, rotDeci) {
   const px = MOUTH.pos[0] + map(x,-100,100,-MOUTH.off,MOUTH.off);
   const py = MOUTH.pos[1] + map(y,-100,100,-MOUTH.off,MOUTH.off);
-  const sx = map(w,0,100,MOUTH.szMin[0],MOUTH.szMax[0]);
-  const sy = map(w,0,100,MOUTH.szMin[1],MOUTH.szMax[1]);
-  const r  = map(w,0,100,MOUTH.rMin,MOUTH.rMax);
   ctx.save();
-  ctx.translate(160+px, 120+py);
-  ctx.rotate(rotDeci/10 * Math.PI/180);
-  ctx.beginPath(); ctx.roundRect(-sx/2, -sy/2, sx, sy, r);
-  ctx.fillStyle='#fff'; ctx.fill();
+  if (w >= 50) {
+    // 张嘴: 圆角矩形 (weight 50-100)
+    const s = map(w,50,100,MOUTH.openMin,MOUTH.openMax), sx = s*5/4;
+    ctx.translate(160+px, 120+py);
+    ctx.rotate(rotDeci/10 * Math.PI/180);
+    ctx.beginPath(); ctx.roundRect(-sx/2, -s/2, sx, s, 14);
+    ctx.fillStyle='#fff'; ctx.fill();
+  } else {
+    // 弧线微笑 (weight 0-49, 越大笑得越开); 旋转围绕弧的可视中心
+    const aw = map(w,0,49,MOUTH.arcMin,MOUTH.arcMax);
+    ctx.translate(160+px, 120+py - aw*0.33);
+    ctx.rotate(rotDeci/10 * Math.PI/180);
+    ctx.beginPath();
+    ctx.arc(0, 0, aw/2, 20*Math.PI/180, 160*Math.PI/180);
+    ctx.strokeStyle='#fff'; ctx.lineWidth=MOUTH.arcW; ctx.lineCap='round'; ctx.stroke();
+  }
   ctx.restore();
 }
 
@@ -159,13 +170,14 @@ function apply(vals) { stopTalk(); Object.assign(S, vals); for (const k of Objec
 
 // 固件 setEmotion() 原参数: [weight, rotation(0.1°)] 左眼用正右眼取反已在 drawEye 处理
 const P = {
-  neutral:{ lw:100,lr:0, rw:100,rr:0, mw:0 },
-  happy:  { lw:72,lr:1550, rw:72,rr:1550, mw:28, my:10 },
-  angry:  { lw:70,lr:450, rw:70,rr:450, mw:10, my:0 },
-  sad:    { lw:70,lr:-400, rw:70,rr:-400, mw:5, my:20 },
-  doubt:  { lw:75,lr:0, rw:75,rr:0, mw:0 },
-  sleepy: { lw:35,lr:-50, rw:35,rr:-50, mw:8, my:14 },
-  wink:   { lw:100,lr:0, rw:10,rr:1550, mw:22, my:8, mx:18, mr:-80 },
+  // 内置六情绪 = skins/goudan setEmotion() 原参数 (eyes: weight/rot/size, mouth: weight)
+  neutral:{ lw:100,lr:0,ls:0, rw:100,rr:0,rs:0, mw:18 },
+  happy:  { lw:55,lr:1550,ls:10, rw:55,rr:1550,rs:10, mw:40 },
+  angry:  { lw:62,lr:450,ls:-10, rw:62,rr:450,rs:-10, mw:12 },   // 固件中弧线倒扣(frown), 模拟器近似
+  sad:    { lw:60,lr:-400,ls:0, rw:60,rr:-400,rs:0, mw:20 },     // 同上 frown
+  doubt:  { lw:70,lr:0,ls:-15, rw:70,rr:0,rs:-15, mw:6 },
+  sleepy: { lw:30,lr:-50,ls:-5, rw:30,rr:-50,rs:-5, mw:10 },
+  wink:   { lw:100,lr:0, rw:10,rr:1550, mw:35, mx:18, mr:-80 },
   // —— 狗蛋专属预设 v2 (不对称骨架+瞳孔表现力)，与 stackchan_body/expressions.py 逐字一致 ——
   g_thinking:  { lx:70,ly:-75,lw:95,lr:0,ls:20, rx:45,ry:-50,rw:50,rr:350,rs:20, mx:32,my:8,mw:14,mr:100 },
   g_smug:      { lw:70,lr:1600,ls:15, rw:38,rr:1450,rs:15, mx:30,my:8,mw:16,mr:-190 },
