@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>StackChan 表情模拟器 — 固件渲染数学 1:1 复刻</title>
+<style>
+  :root { --bg:#0f1420; --card:#161d2e; --line:#243049; --text:#e8ecf4; --dim:#94a3b8; --blue:#7dd3fc; }
+  body { background:var(--bg); color:var(--text); font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif; margin:0; padding:24px 16px; }
+  .wrap { max-width:980px; margin:auto; }
+  h1 { color:var(--blue); font-size:20px; margin:0 0 4px; }
+  .sub { color:var(--dim); font-size:12.5px; margin-bottom:18px; }
+  .row { display:flex; flex-wrap:wrap; gap:18px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:16px; }
+  canvas { background:#000; border-radius:8px; display:block; }
+  .presets { display:flex; flex-wrap:wrap; gap:8px; margin:12px 0; }
+  button { background:#1a2338; color:var(--text); border:1px solid var(--line); border-radius:8px; padding:7px 14px; cursor:pointer; font-size:13px; }
+  button:hover { border-color:var(--blue); color:var(--blue); }
+  .sliders { min-width:300px; flex:1; }
+  .grp { margin-bottom:10px; }
+  .grp b { color:var(--blue); font-size:13px; }
+  label { display:flex; align-items:center; gap:8px; font-size:12px; color:var(--dim); margin:4px 0; }
+  label span.v { width:38px; text-align:right; color:var(--text); font-variant-numeric:tabular-nums; }
+  input[type=range] { flex:1; accent-color:#7dd3fc; }
+  pre { background:#0b1020; border:1px solid var(--line); border-radius:8px; padding:10px; font-size:11.5px; color:#c4d5f5; overflow-x:auto; margin:8px 0 0; }
+  .note { color:var(--dim); font-size:11.5px; margin-top:10px; line-height:1.6; }
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>🤖 StackChan 表情模拟器</h1>
+<div class="sub">渲染数学 1:1 取自固件 <code>skins/default/eyes.cpp + mouth.cpp</code>（320×240 屏，几何常量与 map_range 完全一致）· 情绪预设参数来自固件 <code>setEmotion()</code> 源码 · 下方 JSON 即 body-client <code>emotion()</code> 实际发送的 payload</div>
+
+<div class="row">
+  <div class="card">
+    <canvas id="cv" width="320" height="240" style="width:480px;height:360px;image-rendering:pixelated;"></canvas>
+    <div class="presets">
+      <button onclick="preset('neutral')">😐 Neutral</button>
+      <button onclick="preset('happy')">😊 Happy</button>
+      <button onclick="preset('angry')">😠 Angry</button>
+      <button onclick="preset('sad')">😢 Sad</button>
+      <button onclick="preset('doubt')">🤨 Doubt</button>
+      <button onclick="preset('sleepy')">😪 Sleepy</button>
+      <button onclick="preset('wink')">😉 眨单眼*</button>
+      <button onclick="preset('shock')">😳 惊讶*</button>
+      <button onclick="preset('talk')" id="talkBtn">🗣 说话动画</button>
+    </div>
+  </div>
+
+  <div class="sliders card">
+    <div class="grp"><b>左眼 leftEye</b>
+      <label>x <input type="range" min="-100" max="100" value="0" id="lx"><span class="v" id="lxv">0</span></label>
+      <label>y <input type="range" min="-100" max="100" value="0" id="ly"><span class="v" id="lyv">0</span></label>
+      <label>开合 weight <input type="range" min="0" max="100" value="100" id="lw"><span class="v" id="lwv">100</span></label>
+      <label>旋转 rotation <input type="range" min="-1800" max="1800" value="0" id="lr"><span class="v" id="lrv">0</span></label>
+      <label>瞳孔 size <input type="range" min="-100" max="100" value="0" id="ls"><span class="v" id="lsv">0</span></label>
+    </div>
+    <div class="grp"><b>右眼 rightEye</b>
+      <label>x <input type="range" min="-100" max="100" value="0" id="rx"><span class="v" id="rxv">0</span></label>
+      <label>y <input type="range" min="-100" max="100" value="0" id="ry"><span class="v" id="ryv">0</span></label>
+      <label>开合 weight <input type="range" min="0" max="100" value="100" id="rw"><span class="v" id="rwv">100</span></label>
+      <label>旋转 rotation <input type="range" min="-1800" max="1800" value="0" id="rr"><span class="v" id="rrv">0</span></label>
+      <label>瞳孔 size <input type="range" min="-100" max="100" value="0" id="rs"><span class="v" id="rsv">0</span></label>
+    </div>
+    <div class="grp"><b>嘴 mouth</b>
+      <label>x <input type="range" min="-100" max="100" value="0" id="mx"><span class="v" id="mxv">0</span></label>
+      <label>y <input type="range" min="-100" max="100" value="0" id="my"><span class="v" id="myv">0</span></label>
+      <label>张合 weight <input type="range" min="0" max="100" value="0" id="mw"><span class="v" id="mwv">0</span></label>
+      <label>旋转 rotation <input type="range" min="-1800" max="1800" value="0" id="mr"><span class="v" id="mrv">0</span></label>
+    </div>
+  </div>
+</div>
+
+<div class="card" style="margin-top:16px">
+  <b style="color:var(--blue);font-size:13px">body-client 发送的 payload（0x03 ControlAvatar）</b>
+  <pre id="json"></pre>
+  <div class="note">
+    * wink/惊讶 非固件预设，是用同一套参数组合出来的自定义表情——证明 0x03 通道能做的比 6 个内置情绪多得多。<br>
+    固件映射关系：eye.weight 0→100 = 眼睑全遮→全开 · eye.size -100→100 = 瞳孔 8→32px · eye.rotation 单位 0.1°（Happy=1550 即 155°，眼睑斜切出月牙眼）· mouth.weight 0→100 = 90×6 扁条→60×50 圆角张嘴（radius 0→16）· 位置 ±100 = 物理 ±16px 偏移。<br>
+    内置情绪参数逐字来自固件源码：Happy(72,155°) Angry(70,45°) Sad(70,-40°) Doubt(75,0) Sleepy(35,-5°)；嘴的开合由语音链路 TTS 音量实时驱动（说话动画按钮模拟的就是这个）。
+  </div>
+</div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const S = { lx:0,ly:0,lw:100,lr:0,ls:0, rx:0,ry:0,rw:100,rr:0,rs:0, mx:0,my:0,mw:0,mr:0 };
+const map = (v,a,b,c,d) => Math.round(c + (v-a)*(d-c)/(b-a));
+
+// —— 固件几何常量 (eyes.cpp / mouth.cpp 原值) ——
+const EYE = { pos:[-70,-16], off:16, szMin:8, szMax:32 };
+const MOUTH = { pos:[0,26], off:16, szMin:[90,6], szMax:[60,50], rMin:0, rMax:16 };
+
+function drawEye(ctx, isLeft, x, y, w, rotDeci, size) {
+  const px = (isLeft ? EYE.pos[0] : -EYE.pos[0]) + map(x,-100,100,-EYE.off,EYE.off);
+  const py = EYE.pos[1] + map(y,-100,100,-EYE.off,EYE.off);
+  const d  = map(size,-100,100,EYE.szMin,EYE.szMax);       // 瞳孔直径
+  const lidY = -map(w,0,100,0,d);                          // 眼睑位移 (weight)
+  ctx.save();
+  ctx.translate(160+px, 120+py);
+  ctx.rotate(rotDeci/10 * Math.PI/180 * (isLeft?1:-1) * -1); // 固件右眼取反
+  // 瞳孔（白）
+  ctx.beginPath(); ctx.arc(0, 0, d/2, 0, 7); ctx.fillStyle='#fff'; ctx.fill();
+  // 眼睑（黑, 方形, 从上方压下来）
+  ctx.fillStyle='#000';
+  ctx.fillRect(-d/2-1, -d/2 + (d+lidY) - d, d+2, d);
+  ctx.restore();
+}
+
+function drawMouth(ctx, x, y, w, rotDeci) {
+  const px = MOUTH.pos[0] + map(x,-100,100,-MOUTH.off,MOUTH.off);
+  const py = MOUTH.pos[1] + map(y,-100,100,-MOUTH.off,MOUTH.off);
+  const sx = map(w,0,100,MOUTH.szMin[0],MOUTH.szMax[0]);
+  const sy = map(w,0,100,MOUTH.szMin[1],MOUTH.szMax[1]);
+  const r  = map(w,0,100,MOUTH.rMin,MOUTH.rMax);
+  ctx.save();
+  ctx.translate(160+px, 120+py);
+  ctx.rotate(rotDeci/10 * Math.PI/180);
+  ctx.beginPath(); ctx.roundRect(-sx/2, -sy/2, sx, sy, r);
+  ctx.fillStyle='#fff'; ctx.fill();
+  ctx.restore();
+}
+
+function render() {
+  const cv=$('cv'), ctx=cv.getContext('2d');
+  ctx.fillStyle='#000'; ctx.fillRect(0,0,320,240);
+  drawEye(ctx, true,  S.lx,S.ly,S.lw,S.lr,S.ls);
+  drawEye(ctx, false, S.rx,S.ry,S.rw,S.rr,S.rs);
+  drawMouth(ctx, S.mx,S.my,S.mw,S.mr);
+  // payload 预览 (仅列非默认值; x/y 成对补全 = body-client 修过的固件坑)
+  const pack = (x,y,w,r,s,defW) => {
+    const o={};
+    if (x||y) { o.x=x; o.y=y; }
+    if (w!==defW) o.weight=w;
+    if (r) o.rotation=r;
+    if (s!==undefined && s!==0) o.size=s;
+    return Object.keys(o).length?o:null;
+  };
+  const j={};
+  const le=pack(S.lx,S.ly,S.lw,S.lr,S.ls,100); if(le) j.leftEye=le;
+  const re=pack(S.rx,S.ry,S.rw,S.rr,S.rs,100); if(re) j.rightEye=re;
+  const mo=pack(S.mx,S.my,S.mw,S.mr,undefined,0); if(mo) j.mouth=mo;
+  $('json').textContent = 'await body.emotion(' + JSON.stringify(j, null, 2) + ')';
+}
+
+for (const k of Object.keys(S)) {
+  $(k).addEventListener('input', e => { S[k]=+e.target.value; $(k+'v').textContent=e.target.value; stopTalk(); render(); });
+}
+function apply(vals) { stopTalk(); Object.assign(S, vals); for (const k of Object.keys(S)) { $(k).value=S[k]; $(k+'v').textContent=S[k]; } render(); }
+
+// 固件 setEmotion() 原参数: [weight, rotation(0.1°)] 左眼用正右眼取反已在 drawEye 处理
+const P = {
+  neutral:{ lw:100,lr:0, rw:100,rr:0, mw:0 },
+  happy:  { lw:72,lr:1550, rw:72,rr:1550, mw:28, my:10 },
+  angry:  { lw:70,lr:450, rw:70,rr:450, mw:10, my:0 },
+  sad:    { lw:70,lr:-400, rw:70,rr:-400, mw:5, my:20 },
+  doubt:  { lw:75,lr:0, rw:75,rr:0, mw:0 },
+  sleepy: { lw:35,lr:-50, rw:35,rr:-50, mw:8, my:14 },
+  wink:   { lw:100,lr:0, rw:10,rr:1550, mw:22, my:8, mx:18, mr:-80 },
+  shock:  { lw:100,ls:70, rw:100,rs:70, mw:65 },
+};
+function preset(name){ const base={ lx:0,ly:0,lw:100,lr:0,ls:0, rx:0,ry:0,rw:100,rr:0,rs:0, mx:0,my:0,mw:0,mr:0 }; apply({...base, ...P[name]}); }
+
+// 说话动画: 语音链路里嘴部 weight 由 TTS 音量驱动, 这里用正弦模拟
+let talkTimer=null;
+function stopTalk(){ if(talkTimer){ clearInterval(talkTimer); talkTimer=null; $('talkBtn').textContent='🗣 说话动画'; } }
+document.getElementById('talkBtn').onclick = () => {
+  if (talkTimer) { stopTalk(); render(); return; }
+  $('talkBtn').textContent='⏸ 停止';
+  let t=0;
+  talkTimer=setInterval(()=>{ t+=0.25; S.mw=Math.round(30+28*Math.abs(Math.sin(t*2.1))+12*Math.abs(Math.sin(t*3.7))); $('mw').value=S.mw; $('mwv').textContent=S.mw; render(); }, 50);
+};
+
+preset('happy');
+</script>
+</body>
+</html>
