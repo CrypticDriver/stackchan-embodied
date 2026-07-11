@@ -71,22 +71,47 @@ async def _post_chat(url: str, token: str, payload: dict, total: float) -> str:
     return data["choices"][0]["message"]["content"]
 
 
+AGENT_TIMEOUT = float(os.environ.get("AGENT_TIMEOUT", "25"))   # agent 快速失败阈值 (原 600 → 太久)
+# 连续失败熔断: agent 连错 N 次后暂时直接走辅脑, 避免每轮都白等
+_agent_fail_streak = 0
+_agent_circuit_open_until = 0.0
+
+
+async def _fallback(payload: dict) -> str:
+    fb = dict(payload)
+    fb["model"] = FALLBACK_MODEL
+    fb["stream"] = False
+    fb.setdefault("messages", [])
+    return await _post_chat(FALLBACK_URL, FALLBACK_TOKEN, fb, 60)
+
+
 async def _call_upstream(payload: dict) -> str:
-    """非流式调上游; agent 报错时回落辅脑 (LiteLLM), 绝不把错误英文念出来。"""
+    """agent 优先, 但快速失败/熔断回落辅脑 (LiteLLM), 绝不把错误英文念出来。"""
+    global _agent_fail_streak, _agent_circuit_open_until
+    import time as _t
     payload = dict(payload)
     payload["stream"] = False
+
+    # 熔断打开期: agent 最近连错, 直接走辅脑 (辅脑快而稳)
+    if _t.time() < _agent_circuit_open_until:
+        return await _fallback(payload)
+
     try:
-        content = await _post_chat(UPSTREAM, UPSTREAM_TOKEN, payload, 600)
+        content = await _post_chat(UPSTREAM, UPSTREAM_TOKEN, payload, AGENT_TIMEOUT)
         if content and not any(m in content for m in UPSTREAM_ERR_MARKS):
+            _agent_fail_streak = 0            # agent 成功, 重置
             return content
         print("upstream returned error text, falling back:", (content or "")[:80], flush=True)
     except Exception as e:  # noqa: BLE001
         print("upstream exception, falling back:", e, flush=True)
-    fb = dict(payload)
-    fb["model"] = FALLBACK_MODEL
-    fb.setdefault("messages", [])
-    content = await _post_chat(FALLBACK_URL, FALLBACK_TOKEN, fb, 60)
-    return content
+
+    # agent 失败: 累计, 连错 3 次熔断 90s
+    _agent_fail_streak += 1
+    if _agent_fail_streak >= 3:
+        _agent_circuit_open_until = _t.time() + 90
+        _agent_fail_streak = 0
+        print("agent circuit OPEN 90s (too many failures) → aux brain", flush=True)
+    return await _fallback(payload)
 
 
 def _sse(data: dict) -> bytes:
