@@ -42,13 +42,15 @@ public:
 
 private:
     void relayout();
+    void reposition_pupil();
 
     bool _is_left_eye = false;
     int _eye_diameter = 0;
 
     std::unique_ptr<uitk::lvgl_cpp::Container> _container;
-    std::unique_ptr<uitk::lvgl_cpp::Container> _eye;
-    std::unique_ptr<uitk::lvgl_cpp::Container> _highlight;
+    std::unique_ptr<uitk::lvgl_cpp::Container> _eye;       // 白眼眶 (固定)
+    std::unique_ptr<uitk::lvgl_cpp::Container> _pupil;     // 黑瞳孔 (随视线滑动)
+    std::unique_ptr<uitk::lvgl_cpp::Container> _highlight; // 瞳孔上的白高光 (跟瞳孔走)
     std::unique_ptr<uitk::lvgl_cpp::Container> _eyelid;
 };
 

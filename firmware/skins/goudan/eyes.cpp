@@ -1,9 +1,10 @@
 /*
- * Goudan skin eyes — 果冻高光眼。
- * 结构: _container(旋转层) > _eye(白色圆) + _highlight(黑色高光缺口) + _eyelid(眼睑遮挡)
- * 参数映射与 default 皮肤同构:
- *   position ±100 → 物理 ±16px; weight 0-100 → 眼睑全遮→全开;
- *   size ±100 → 眼球直径 44→76px (比 default 大一圈, 果冻感); rotation 0.1°。
+ * Goudan skin eyes — 果冻高光眼 (v2: 黑瞳孔在眼白里转)。
+ * 结构: _container(旋转层,固定基准位) > _eye(白眼眶,固定) + _pupil(黑瞳孔,随视线滑动)
+ *        + _highlight(瞳孔上的白高光) + _eyelid(眼睑遮挡)
+ * 参数映射:
+ *   position ±100 → 瞳孔在眼白内滑动 (视线方向, 一眼可辨);
+ *   weight 0-100 → 眼睑全遮→全开; size ±100 → 眼球直径 44→76px; rotation 0.1°。
  *
  * SPDX-License-Identifier: MIT
  */
@@ -13,11 +14,11 @@ using namespace uitk;
 using namespace uitk::lvgl_cpp;
 using namespace stackchan::avatar;
 
-static const Vector2i _eye_pos        = Vector2i(-70, -20);
-static const Vector2i _eye_min_offset = Vector2i(-16, -16);
-static const Vector2i _eye_max_offset = Vector2i(16, 16);
+static const Vector2i _eye_pos     = Vector2i(-70, -20);
 static const Vector2i _eye_size_limit = Vector2i(44, 76);  // size -100 → +100
-static const int _container_size      = 84;
+static const int _container_size   = 84;
+static const int _pupil_pct        = 55;   // 瞳孔直径 = 眼球的 55%
+static const int _pupil_range_pct  = 90;   // 瞳孔可移动范围 (占眼白余量的比例)
 
 static int map_range(int v, int inMin, int inMax, int outMin, int outMax)
 {
@@ -38,6 +39,7 @@ GoudanEyes::GoudanEyes(lv_obj_t* parent, lv_color_t primaryColor, lv_color_t sec
     _container->setSize(_container_size, _container_size);
     _container->setTransformPivot(_container_size / 2, _container_size / 2);
 
+    // 白眼眶 (固定居中)
     _eye = std::make_unique<Container>(_container->get());
     _eye->setRadius(LV_RADIUS_CIRCLE);
     _eye->align(LV_ALIGN_CENTER, 0, 0);
@@ -45,15 +47,22 @@ GoudanEyes::GoudanEyes(lv_obj_t* parent, lv_color_t primaryColor, lv_color_t sec
     _eye->setBgColor(primaryColor);
     _eye->removeFlag(LV_OBJ_FLAG_SCROLLABLE);
 
-    // 高光缺口: 眼球右上角的一小块背景色圆 —— "湿润反光"
-    _highlight = std::make_unique<Container>(_container->get());
+    // 黑瞳孔 (在眼白里滑动 = 视线方向)
+    _pupil = std::make_unique<Container>(_container->get());
+    _pupil->setRadius(LV_RADIUS_CIRCLE);
+    _pupil->align(LV_ALIGN_CENTER, 0, 0);
+    _pupil->setBorderWidth(0);
+    _pupil->setBgColor(secondaryColor);
+    _pupil->removeFlag(LV_OBJ_FLAG_SCROLLABLE);
+
+    // 高光: 瞳孔上的一小块白点 (跟瞳孔走, "湿润反光")
+    _highlight = std::make_unique<Container>(_pupil->get());
     _highlight->setRadius(LV_RADIUS_CIRCLE);
-    _highlight->align(LV_ALIGN_CENTER, 0, 0);
     _highlight->setBorderWidth(0);
-    _highlight->setBgColor(secondaryColor);
+    _highlight->setBgColor(primaryColor);
     _highlight->removeFlag(LV_OBJ_FLAG_SCROLLABLE);
 
-    // 眼睑: 从上向下遮挡的背景色方块
+    // 眼睑: 从上向下遮挡
     _eyelid = std::make_unique<Container>(_container->get());
     _eyelid->setRadius(0);
     _eyelid->align(LV_ALIGN_TOP_MID, 0, 0);
@@ -71,6 +80,7 @@ GoudanEyes::~GoudanEyes()
 {
     _eyelid.reset();
     _highlight.reset();
+    _pupil.reset();
     _eye.reset();
     _container.reset();
 }
@@ -80,28 +90,40 @@ void GoudanEyes::relayout()
     const int d = _eye_diameter;
     _eye->setSize(d, d);
 
-    // 高光: 直径 22% 的小圆, 位于眼球右上 (左右眼对称内翻)
-    const int hd = d * 22 / 100;
-    const int hx = (_is_left_eye ? 1 : 1) * (d * 22 / 100);  // 统一右上, 更像同一光源
-    const int hy = -(d * 24 / 100);
+    // 瞳孔
+    const int pd = d * _pupil_pct / 100;
+    _pupil->setSize(pd, pd);
+
+    // 高光: 瞳孔直径 30% 的小白点, 瞳孔右上
+    const int hd = pd * 30 / 100;
     _highlight->setSize(hd, hd);
-    _highlight->align(LV_ALIGN_CENTER, hx, hy);
+    _highlight->align(LV_ALIGN_CENTER, pd * 15 / 100, -pd * 20 / 100);
 
     // 眼睑: weight 0-100 → 遮挡 100%→0%
     const int lid_h = map_range(100 - _weight, 0, 100, 0, d);
     _eyelid->setSize(d + 4, lid_h);
     _eyelid->align(LV_ALIGN_TOP_MID, 0, (_container_size - d) / 2 - 2);
+
+    // 视线: 瞳孔在眼白内滑动 (随 d 变化, 每次 relayout 重定位)
+    reposition_pupil();
+}
+
+void GoudanEyes::reposition_pupil()
+{
+    const int d  = _eye_diameter;
+    const int pd = d * _pupil_pct / 100;
+    const int range = (d - pd) / 2 * _pupil_range_pct / 100;   // 瞳孔中心可偏移的最大半径
+    const int ppx = map_range(_position.x, -100, 100, -range, range);
+    const int ppy = map_range(_position.y, -100, 100, -range, range);
+    _pupil->align(LV_ALIGN_CENTER, ppx, ppy);
 }
 
 void GoudanEyes::setPosition(const Vector2i& position)
 {
     Element::setPosition(position);
-
-    auto pos_x = _is_left_eye ? _eye_pos.x : -_eye_pos.x;
-    pos_x += map_range(_position.x, -100, 100, _eye_min_offset.x, _eye_max_offset.x);
-    auto pos_y = _eye_pos.y + map_range(_position.y, -100, 100, _eye_min_offset.y, _eye_max_offset.y);
-
-    _container->setPos(pos_x, pos_y);
+    // 眼睛整体固定在基准位; 视线 = 瞳孔在眼白内滑动
+    _container->setPos(_is_left_eye ? _eye_pos.x : -_eye_pos.x, _eye_pos.y);
+    reposition_pupil();
 }
 
 void GoudanEyes::setWeight(int weight)
@@ -144,7 +166,6 @@ void GoudanEyes::setEmotion(const Emotion& emotion)
             apply(100, 0, 0);
             break;
         case Emotion::Happy:
-            // 月牙眼: 眼睑压半 + 大角度旋转让弧线朝下
             apply(55, 1550, 10);
             break;
         case Emotion::Angry:
