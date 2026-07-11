@@ -28,3 +28,27 @@ index 982bbe9..98ed2c9 100644
  #endif
      } else {
          models_ = models_list;
+diff --git a/scripts/build_default_assets.py b/scripts/build_default_assets.py
+index 9ca1464..78f6b25 100755
+--- a/scripts/build_default_assets.py
++++ b/scripts/build_default_assets.py
+@@ -898,12 +898,17 @@ def main():
+             "language": language,
+             "duration": 3000,  # Default duration in ms
+             "threshold": custom_wake_word_config['threshold'],
++            # stackchan-embodied patch: semicolon-separated multi wake words
+             "commands": [
+                 {
+-                    "command": custom_wake_word_config['wake_word'],
+-                    "text": custom_wake_word_config['display'],
++                    "command": w.strip(),
++                    "text": (custom_wake_word_config['display'].split(';')[i].strip()
++                             if i < len(custom_wake_word_config['display'].split(';'))
++                             else custom_wake_word_config['display'].split(';')[0]),
+                     "action": "wake"
+                 }
++                for i, w in enumerate(custom_wake_word_config['wake_word'].split(';'))
++                if w.strip()
+             ]
+         }
+         print(f"  custom wake word: {custom_wake_word_config['wake_word']} ({custom_wake_word_config['display']})")
