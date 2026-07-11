@@ -1,53 +1,66 @@
-# stackchan-embodied 🤖
+# stackchan-embodied 🐕
 
-**StackChan 具身智能：脑在云端，桌上是身体。**
+**给 M5Stack StackChan 一个云端的灵魂——脑在外面，桌上的机器人只是身体。**
 
-给 M5Stack StackChan (ESP32-S3) 做的云端桥（cloud-bridge）具身化方案 —— 设备只发起 outbound 连接（家里零部署、零端口转发），大脑（OpenClaw Agent「狗蛋」）在 EC2 上驱动它的表情、动作、摄像头、语音。
+一台 M5Stack StackChan（CoreS3，ESP32-S3）机器人，接上一个真正的 AI agent 大脑：
+能自然语音对话、看东西、转头做表情、还能被赋予各种"关注点"主动开口找你。
+传统语音音箱是"你问它才答"；这个项目让机器人**有 agency**——大脑可以主动通过身体表达、提醒、汇报。
 
-## 📋 任务书 / 路线图
-
-**[docs/ROADMAP.html](docs/ROADMAP.html)** — 完整的具身智能玩法路线图（M1-M5），交付 Claude Code 执行。
-
-在线预览: https://crypticdriver.github.io/stackchan-embodied/ROADMAP.html
-
-## 架构一图流
-
-```
-狗蛋 (OpenClaw, AWS EC2)
-  ├─ xiaozhi-esp32-server (自建, 语音: FunASR 耳 + edge-tts 声 + LLM=OpenClaw)
-  ├─ StackChan Go Server (官方开源 server/, 身体 relay, 设备 outbound WS)
-  │    body-client 伪装 App 发二进制控制帧: 表情/动作/摄像头/音频
-  └─ 玩法层: happy-watcher(盯 CC 干活) / 人脸追踪 / 生活流
-        ⇡ 全部设备主动连出 (CloudFront wss → ALB → EC2)
-StackChan 固件 = 纯身体 (语音链路免刷: 配网门户改 OTA 地址;
-身体链路重编译刷一次: sdkconfig.defaults.local 覆盖 SERVER_URL, 详见 docs/firmware-repoint.md)
-```
-
-## 里程碑
-
-| M | 内容 | 状态 |
-|---|------|------|
-| M1-B | 语音大脑: xiaozhi-esp32-server + FunASR/edge-tts + LLM(LiteLLM→Claude) + 视觉(拍照识图) | ✅ **真机上线**: 狗蛋应答/看图/MCP转头/LED |
-| M1-A | 身体+皮肤+唤醒词: goudan果冻眼skin + IdleLife待机动画 + 三狗蛋唤醒词(threshold 8) + relay 软件栈 | ✅ **真机已刷** (2026-07-11); 0x03 relay 待桌宠模式联调 |
-| M2 | 工作具身化: 盯 Happy (CC 等审批→转头喊人, 完成→点头播报) | 🟡 状态机核心完成(8/8 测试); Happy API 对接待 M1-A 上真机后联调 |
-| M3 | 感知主动化: 人脸追踪 / 回家打招呼 / 主动看家 | ⬜ |
-| M4 | 对话打磨 + 退役小智云链路 | ⬜ |
-| M5 | 生活流: 早报播报 / 提醒物理化 / IR 遥控家电 | ⬜ |
-
-**大哥下一步: 看 [docs/operator-guide.md](docs/operator-guide.md)。阶段一(免刷零风险)5 分钟切语音大脑; 阶段二(刷机)务必先 esptool 全片备份。**
-**大脑架构 (2026-07-11 终态)**: 设备 → xiaozhi-server → brain-router(:4001 异步总线) → **OpenClaw xiaogoudan** (us-west-2, Sonnet 5, VPC peering) — 真 agent: 共享狗蛋记忆、干慢活先应声后播报; LiteLLM(:4000) 为辅脑(视觉/记忆总结/错误兜底)。监工 happy-watcher 事件由 agent 亲自措辞播报。
-
-## 相关仓库
-
-- 代码借用源: [CrypticDriver/stackchan-mcp](https://github.com/CrypticDriver/stackchan-mcp)（fork，借 TTS/ASR/PCM 模块与固件 HTTP API 语义）
-- 上游固件/服务端: [m5stack/StackChan](https://github.com/m5stack/StackChan)
-- 语音服务端: [xinnan-tech/xiaozhi-esp32-server](https://github.com/xinnan-tech/xiaozhi-esp32-server)
-- 架构参考: [PheelaV/stackchan-badger](https://github.com/PheelaV/stackchan-badger) · [lifemate-ai/embodied-claude](https://github.com/lifemate-ai/embodied-claude)
+> 名字梗：这台机器人的大脑是一个叫「狗蛋」的 OpenClaw agent，所以机器人也叫狗蛋。
 
 ---
-*by 狗蛋 🐕 for 大哥 · 2026-07-10*
 
-## 在线页面 (GitHub Pages, 无缓存问题)
+## 它能做什么
 
-- 表情模拟器: https://crypticdriver.github.io/stackchan-embodied/face-simulator.html
-- 路线图: https://crypticdriver.github.io/stackchan-embodied/ROADMAP.html
+- 🗣 **自然对话**：说「嘿狗蛋」唤醒，本地识别→云端 agent 思考→语音回答，带表情和口型同步
+- 👁 **看**：摄像头拍照 + 视觉模型，"看看我手里是什么"
+- 🦾 **动**：转头、12 套表情（含专属「果冻高光眼」皮肤）、机身 RGB 灯、待机眨眼
+- 🧠 **真 agent 大脑**：不是无状态问答机——有跨对话记忆、能调工具、慢任务"先应一声、干完主动播报"
+- 🔌 **能力槽位**：大脑侧插入任意"关注点"（示例见 [capabilities/](capabilities/)），发现值得说的事就通过身体主动告诉你
+
+## 一眼架构
+
+```
+   🏠 家里                    ☁️ 边缘                🌎 us-west-2 (脑体同区)
+┌──────────┐   outbound   ┌────────────┐   ┌──────────────────────────────┐
+│ StackChan │═══ wss ════▶│ CloudFront  │──▶│ ALB → 语音栈(ASR/TTS/VAD)     │
+│ 自编译固件 │  (设备只连出) │ +X-Origin- │    │     → brain-router(异步总线)  │
+│ 果冻眼皮肤 │◀═════════════│  Verify→ALB │   │     → OpenClaw「狗蛋」agent    │
+└──────────┘              └────────────┘   │       (loopback, 有记忆+工具)  │
+   零入站端口                   TLS/wss 终结  └──────────────────────────────┘
+                                                   ▲ 能力槽位在大脑侧插入
+```
+
+设备**只发起 outbound 连接**（家里零端口转发）；一切公网入口经 CloudFront→ALB（`X-Origin-Verify` 头校验），EC2 安全组只放行 ALB。详见 **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**。
+
+## 从零到桌上的狗蛋
+
+看 **[docs/QUICKSTART.md](docs/QUICKSTART.md)** —— 三步：①云端一键部署 ②刷固件（先备份，防砖流程齐全）③配网。
+
+```bash
+git clone https://github.com/CrypticDriver/stackchan-embodied && cd stackchan-embodied
+./scripts/deploy.sh            # 云端: 装语音栈+brain-router+服务 (幂等)
+# 固件: 见 docs/flash-guide.html (Mac) / docs/operator-guide.md
+```
+
+## 目录
+
+| 路径 | 内容 |
+|---|---|
+| [`firmware/`](firmware/) | 自编译固件产物 + goudan skin 源码 + secret_logic + 唤醒词补丁 + 复现说明 |
+| [`body-client/`](body-client/) | Python 库：WS 帧协议、RSA 鉴权、表情预设、驱动身体 API（含测试） |
+| [`deploy/`](deploy/) | 云端组件：xiaozhi 语音栈配置、brain-router、LiteLLM 辅脑、控制台、systemd |
+| [`capabilities/`](capabilities/) | 大脑能力槽位示例（如何给狗蛋加新"关注点"） |
+| [`scripts/`](scripts/) | `deploy.sh` 一键部署 · `health-check.sh` 健康检查 |
+| [`docs/`](docs/) | 架构、快速上手、刷机指南、表情模拟器、固件核查报告 |
+
+## 在线页面
+
+- [控制台](https://da8daz4hvc7q8.cloudfront.net/console/)（需 token）· [表情模拟器](https://crypticdriver.github.io/stackchan-embodied/face-simulator.html) · [画风画廊](https://crypticdriver.github.io/stackchan-embodied/skin-gallery.html) · [刷机指南](https://crypticdriver.github.io/stackchan-embodied/flash-guide.html)
+
+## 上游 / 致谢
+
+固件基于 [m5stack/StackChan](https://github.com/m5stack/StackChan)（含 [78/xiaozhi-esp32](https://github.com/78/xiaozhi-esp32)），语音服务端 [xinnan-tech/xiaozhi-esp32-server](https://github.com/xinnan-tech/xiaozhi-esp32-server)。
+
+---
+*脑在云端，桌上是身体。*

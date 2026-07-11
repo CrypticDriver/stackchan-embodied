@@ -5,7 +5,7 @@ After=network-online.target stackchan-xiaozhi.service
 [Service]
 Type=simple
 User=ec2-user
-WorkingDirectory=/home/ec2-user/worklog/stackchan/stackchan-embodied/happy-watcher
+WorkingDirectory=/home/ec2-user/worklog/stackchan/stackchan-embodied/capabilities/happy-watcher
 Environment=HAPPY_SERVER_URL=https://d2nkikyt4i91kk.cloudfront.net
 Environment=QUIET_HOURS=
 ExecStart=/home/ec2-user/worklog/stackchan/xiaozhi-venv/bin/python -m happy_watcher.main --interval 20

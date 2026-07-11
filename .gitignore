@@ -1,4 +1,7 @@
-.pytest_cache/
 __pycache__/
+*.pyc
+.pytest_cache/
 *.pem
 .env*
+*.secret*
+build/
