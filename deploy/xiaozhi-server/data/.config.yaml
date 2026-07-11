@@ -17,6 +17,10 @@ server:
 log:
   log_level: INFO
 
+# 出错兜底文案 (默认是"小智"人设, 穿帮)
+system_error_response: "呃，我刚才走神了，大哥再说一遍？"
+
+
 # M2 监工需要常连通道: 不因静默断开 + 心跳保活 (设备 USB 供电, 无功耗顾虑)
 close_connection_no_voice_time: 86400
 enable_websocket_ping: true
@@ -62,6 +66,11 @@ LLM:
     api_key: __OPENCLAW_TOKEN__
     temperature: 0.7
     max_tokens: 300
+    timeout:
+      connect: 5.0
+      read: 180.0
+      write: 10.0
+      pool: 5.0
   LiteLLMBrain:
     type: openai
     base_url: http://127.0.0.1:4000/v1
