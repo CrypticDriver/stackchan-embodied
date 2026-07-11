@@ -21,10 +21,22 @@ selected_module:
   VAD: SileroVAD
   ASR: FunASR          # 本地 SenseVoiceSmall
   LLM: StackChanBrain
-  VLLM: ChatGLMVLLM    # 暂不用视觉，占位
+  VLLM: StackChanVision
   TTS: EdgeTTS
   Memory: mem_local_short
   Intent: function_call
+
+Memory:
+  mem_local_short:
+    type: mem_local_short
+    llm: StackChanBrain   # 记忆总结也走 LiteLLM (默认 ChatGLMLLM 是中文占位 key, 会 ascii 崩)
+
+VLLM:
+  StackChanVision:
+    type: openai
+    base_url: http://127.0.0.1:4000/v1
+    model_name: stackchan-brain
+    api_key: __LITELLM_KEY__
 
 LLM:
   StackChanBrain:
