@@ -19,6 +19,10 @@ from aiohttp import ClientSession, ClientTimeout, web
 
 UPSTREAM = os.environ.get("OPENCLAW_URL", "http://10.0.1.80:18790/v1/chat/completions")
 UPSTREAM_TOKEN = os.environ["OPENCLAW_TOKEN"]
+FALLBACK_URL = os.environ.get("FALLBACK_URL", "http://127.0.0.1:4000/v1/chat/completions")
+FALLBACK_TOKEN = os.environ.get("FALLBACK_TOKEN", "")
+FALLBACK_MODEL = os.environ.get("FALLBACK_MODEL", "stackchan-brain")
+UPSTREAM_ERR_MARKS = ("LLM request failed", "No response from OpenClaw")
 PUSH_URL = os.environ.get("PUSH_URL", "http://127.0.0.1:9101/goudan/say")
 INLINE_WAIT = float(os.environ.get("INLINE_WAIT", "8"))
 HOLD_LINES = [
@@ -58,19 +62,31 @@ async def _push_say(text: str) -> None:
             print("push failed:", e, flush=True)
 
 
-async def _call_upstream(payload: dict) -> str:
-    """非流式调上游, 返回完整回答文本。"""
-    payload = dict(payload)
-    payload["stream"] = False
+async def _post_chat(url: str, token: str, payload: dict, total: float) -> str:
     async with ClientSession() as s:
-        async with s.post(
-            UPSTREAM,
-            json=payload,
-            headers={"Authorization": f"Bearer {UPSTREAM_TOKEN}"},
-            timeout=ClientTimeout(total=600),
-        ) as r:
+        async with s.post(url, json=payload,
+                          headers={"Authorization": f"Bearer {token}"},
+                          timeout=ClientTimeout(total=total)) as r:
             data = await r.json()
     return data["choices"][0]["message"]["content"]
+
+
+async def _call_upstream(payload: dict) -> str:
+    """非流式调上游; agent 报错时回落辅脑 (LiteLLM), 绝不把错误英文念出来。"""
+    payload = dict(payload)
+    payload["stream"] = False
+    try:
+        content = await _post_chat(UPSTREAM, UPSTREAM_TOKEN, payload, 600)
+        if content and not any(m in content for m in UPSTREAM_ERR_MARKS):
+            return content
+        print("upstream returned error text, falling back:", (content or "")[:80], flush=True)
+    except Exception as e:  # noqa: BLE001
+        print("upstream exception, falling back:", e, flush=True)
+    fb = dict(payload)
+    fb["model"] = FALLBACK_MODEL
+    fb.setdefault("messages", [])
+    content = await _post_chat(FALLBACK_URL, FALLBACK_TOKEN, fb, 60)
+    return content
 
 
 def _sse(data: dict) -> bytes:
