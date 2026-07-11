@@ -27,8 +27,8 @@ StackChan 固件 = 纯身体 (语音链路免刷: 配网门户改 OTA 地址;
 
 | M | 内容 | 状态 |
 |---|------|------|
-| M1-B | 语音大脑(先行, 零刷机): xiaozhi-esp32-server + FunASR/edge-tts + LLM, 配网门户改 OTA 地址即切 | ✅ 云端已上线, E2E PASS; 待大哥按 operator-guide 阶段一切换设备 |
-| M1-A | 身体 relay(需刷机一次): Go server 部署 + RSA 密钥 + secret_logic 补全 + body-client 帧协议 | ✅ 软件全部完成(16/16 测试); 固件已编译**未烧录**, 待大哥按阶段二备份后刷 |
+| M1-B | 语音大脑: xiaozhi-esp32-server + FunASR/edge-tts + LLM(LiteLLM→Claude) + 视觉(拍照识图) | ✅ **真机上线**: 狗蛋应答/看图/MCP转头/LED |
+| M1-A | 身体+皮肤+唤醒词: goudan果冻眼skin + IdleLife待机动画 + 三狗蛋唤醒词(threshold 8) + relay 软件栈 | ✅ **真机已刷** (2026-07-11); 0x03 relay 待桌宠模式联调 |
 | M2 | 工作具身化: 盯 Happy (CC 等审批→转头喊人, 完成→点头播报) | 🟡 状态机核心完成(8/8 测试); Happy API 对接待 M1-A 上真机后联调 |
 | M3 | 感知主动化: 人脸追踪 / 回家打招呼 / 主动看家 | ⬜ |
 | M4 | 对话打磨 + 退役小智云链路 | ⬜ |
