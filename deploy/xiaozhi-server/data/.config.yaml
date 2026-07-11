@@ -17,6 +17,10 @@ server:
 log:
   log_level: INFO
 
+# M2 监工需要常连通道: 不因静默断开 + 心跳保活 (设备 USB 供电, 无功耗顾虑)
+close_connection_no_voice_time: 86400
+enable_websocket_ping: true
+
 selected_module:
   VAD: SileroVAD
   ASR: FunASR          # 本地 SenseVoiceSmall

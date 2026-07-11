@@ -1,0 +1,16 @@
+[Unit]
+Description=happy-watcher (M2: CC sessions -> goudan announcements)
+After=network-online.target stackchan-xiaozhi.service
+
+[Service]
+Type=simple
+User=ec2-user
+WorkingDirectory=/home/ec2-user/worklog/stackchan/stackchan-embodied/happy-watcher
+Environment=HAPPY_SERVER_URL=https://d2nkikyt4i91kk.cloudfront.net
+Environment=QUIET_HOURS=
+ExecStart=/home/ec2-user/worklog/stackchan/xiaozhi-venv/bin/python -m happy_watcher.main --interval 20
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
