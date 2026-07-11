@@ -4,3 +4,4 @@
 CONFIG_STACKCHAN_SERVER_URL="https://da8daz4hvc7q8.cloudfront.net"
 # Voice brain OTA: device → CloudFront → ALB → xiaozhi-server :8003
 CONFIG_OTA_URL="https://da8daz4hvc7q8.cloudfront.net/xiaozhi/ota/"
+CONFIG_STACKCHAN_SKIN_GOUDAN=y
