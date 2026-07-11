@@ -42,6 +42,12 @@ public:
         _was_suppressed = true;
     }
 
+    /// 说话状态: 说话时眼睛盯着大哥(回正中不乱飘), 只保留眨眼
+    void set_speaking(bool speaking)
+    {
+        _speaking = speaking;
+    }
+
     void _update(Modifiable& stackchan) override
     {
         if (!stackchan.hasAvatar() || stackchan.avatar().isModifyLocked()) {
@@ -92,19 +98,33 @@ public:
             return;
         }
 
-        // ---- 2. 瞳孔漂移 ----
-        if (now >= _next_drift) {
-            if (Random::getInstance().getInt(0, 100) < 12) {
-                // 回正中, "看镜头"
+        // ---- 2. 眼神 (saccade 扫视模型) ----
+        // 说话时: 盯着大哥, 眼睛回正中不乱飘 (只留眨眼, 显得专注)
+        if (_speaking) {
+            if (_eye_x != 0 || _eye_y != 0) {
+                _eye_x = 0; _eye_y = 0;
                 avatar.leftEye().setPosition({0, 0});
                 avatar.rightEye().setPosition({0, 0});
-            } else {
-                int dx = Random::getInstance().getInt(-26, 26);
-                int dy = Random::getInstance().getInt(-16, 12);
-                avatar.leftEye().setPosition({dx, dy});
-                avatar.rightEye().setPosition({dx, dy});
             }
-            _next_drift = now + Random::getInstance().getInt(2500, 6000);
+        } else if (now >= _next_drift) {
+            int roll = Random::getInstance().getInt(0, 100);
+            if (roll < 40) {
+                // 40% 回正中"看你" (真人大部分时间看着对方)
+                _eye_x = 0; _eye_y = 0;
+                _next_drift = now + Random::getInstance().getInt(1500, 3500);
+            } else if (roll < 85) {
+                // 45% 小幅微动 (自然的细微眼动, 停留久一点)
+                _eye_x = Random::getInstance().getInt(-8, 8);
+                _eye_y = Random::getInstance().getInt(-6, 4);
+                _next_drift = now + Random::getInstance().getInt(2000, 4500);
+            } else {
+                // 15% 大扫视 (偶尔"被什么吸引"看向远处, 快速停顿)
+                _eye_x = Random::getInstance().getInt(-30, 30);
+                _eye_y = Random::getInstance().getInt(-18, 10);
+                _next_drift = now + Random::getInstance().getInt(700, 1400);
+            }
+            avatar.leftEye().setPosition({_eye_x, _eye_y});
+            avatar.rightEye().setPosition({_eye_x, _eye_y});
         }
 
         // ---- 3. 嘴部微动 (微笑弧度轻微起伏) ----
@@ -125,6 +145,9 @@ private:
     uint32_t _suppress_until = 0;
     bool _was_suppressed    = false;
     bool _enable_blink      = true;
+    bool _speaking          = false;
+    int _eye_x              = 0;
+    int _eye_y              = 0;
     int _base_weight_l      = 100;
     int _base_weight_r      = 100;
 };
