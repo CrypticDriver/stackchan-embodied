@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>StackChan 眼睛方案对比 — 固定高光 vs 可动瞳孔</title>
+<style>
+  :root { --bg:#0f1420; --card:#161d2e; --line:#243049; --text:#e8ecf4; --dim:#94a3b8; --blue:#7dd3fc; --green:#86efac; }
+  * { box-sizing:border-box; }
+  body { background:var(--bg); color:var(--text); font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif; margin:0; padding:20px 14px 60px; line-height:1.6; }
+  .wrap { max-width:820px; margin:auto; }
+  h1 { color:var(--blue); font-size:19px; margin:0 0 4px; }
+  .sub { color:var(--dim); font-size:12.5px; margin-bottom:16px; }
+  .row { display:flex; gap:16px; flex-wrap:wrap; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px; flex:1; min-width:280px; }
+  .card h2 { font-size:14px; margin:0 0 8px; }
+  .cur { color:#fca5a5; } .new { color:var(--green); }
+  canvas { background:#000; border-radius:10px; width:100%; aspect-ratio:4/3; height:auto; image-rendering:pixelated; }
+  .ctrl { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px 16px; margin-top:14px; }
+  label { display:flex; align-items:center; gap:10px; font-size:12.5px; color:var(--dim); margin:8px 0; }
+  label span.v { width:44px; text-align:right; color:var(--text); font-variant-numeric:tabular-nums; }
+  input[type=range] { flex:1; accent-color:#7dd3fc; }
+  .presets { display:flex; flex-wrap:wrap; gap:8px; margin:10px 0 2px; }
+  button { background:#1a2338; color:var(--text); border:1px solid var(--line); border-radius:8px; padding:6px 13px; cursor:pointer; font-size:13px; }
+  button:hover { border-color:var(--blue); color:var(--blue); }
+  .note { color:var(--dim); font-size:12px; margin-top:12px; line-height:1.7; }
+  .note b { color:var(--green); }
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>👁 StackChan 眼睛方案对比</h1>
+<div class="sub">拖滑杆改视线方向，看两种画法的差别。左=现状(白眼球+固定高光)，右=新方案(黑瞳孔在眼白里转)。</div>
+
+<div class="row">
+  <div class="card"><h2 class="cur">现状 · 白眼球整体移位 + 固定高光</h2><canvas id="cur" width="320" height="240"></canvas></div>
+  <div class="card"><h2 class="new">新方案 · 黑瞳孔在眼白里滑动</h2><canvas id="new" width="320" height="240"></canvas></div>
+</div>
+
+<div class="ctrl">
+  <div class="presets">
+    <button onclick="setLook(0,0)">看正中</button>
+    <button onclick="setLook(-90,0)">看左</button>
+    <button onclick="setLook(90,0)">看右</button>
+    <button onclick="setLook(0,-90)">看上</button>
+    <button onclick="setLook(0,60)">看你(下)</button>
+    <button id="autoBtn" onclick="toggleAuto()">▶ 待机 saccade 演示</button>
+    <button id="talkBtn" onclick="toggleTalk()">🗣 说话时(盯着你)</button>
+  </div>
+  <label>视线 X <input type="range" min="-100" max="100" value="0" id="lx"><span class="v" id="lxv">0</span></label>
+  <label>视线 Y <input type="range" min="-100" max="100" value="0" id="ly"><span class="v" id="lyv">0</span></label>
+  <label>新方案·瞳孔大小 <input type="range" min="35" max="75" value="55" id="pd"><span class="v" id="pdv">55</span></label>
+  <div class="note">
+    <b>差别</b>：现状那个小黑点是"眼球高光"，钉死在右上角不动——所以视线方向根本看不出来（你在真机上看到的"黑眼珠一直撇右上角"就是它）。<br>
+    新方案的黑瞳孔真的会在眼白里滑动，看正中/左/右/上一眼可辨；瞳孔上的小白高光跟着瞳孔走，更灵动。<br>
+    眨眼/表情/待机 saccade 逻辑不用改（都调 setPosition，只是移的对象从整眼球变成黑瞳孔）。
+  </div>
+</div>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const EYE_D=64, EYE_POS_X=-70, EYE_OFF=16;   // 与 goudan/eyes.cpp 常量一致
+let S={x:0,y:0,pd:55};
+
+function drawCurrent(ctx){
+  ctx.fillStyle='#000'; ctx.fillRect(0,0,320,240);
+  for(const isL of [true,false]){
+    const baseX = 160 + (isL?EYE_POS_X:-EYE_POS_X);
+    const px = baseX + S.x/100*EYE_OFF;
+    const py = 110 + S.y/100*EYE_OFF;
+    ctx.beginPath(); ctx.arc(px,py,EYE_D/2,0,7); ctx.fillStyle='#fff'; ctx.fill();
+    // 固定高光(右上)
+    const hx=EYE_D*0.22, hy=-EYE_D*0.24, hd=EYE_D*0.22;
+    ctx.beginPath(); ctx.arc(px+hx,py+hy,hd/2,0,7); ctx.fillStyle='#000'; ctx.fill();
+  }
+}
+function drawNew(ctx){
+  ctx.fillStyle='#000'; ctx.fillRect(0,0,320,240);
+  for(const isL of [true,false]){
+    const cx = 160 + (isL?EYE_POS_X:-EYE_POS_X);
+    const cy = 110;
+    // 白眼眶(固定)
+    ctx.beginPath(); ctx.arc(cx,cy,EYE_D/2,0,7); ctx.fillStyle='#fff'; ctx.fill();
+    // 黑瞳孔(滑动, 限制在眼白内)
+    const pd=EYE_D*S.pd/100;
+    const rng=(EYE_D-pd)/2*0.9;
+    const ppx=cx+S.x/100*rng, ppy=cy+S.y/100*rng;
+    ctx.beginPath(); ctx.arc(ppx,ppy,pd/2,0,7); ctx.fillStyle='#000'; ctx.fill();
+    // 瞳孔高光(跟着瞳孔)
+    const hd=pd*0.3;
+    ctx.beginPath(); ctx.arc(ppx+pd*0.15,ppy-pd*0.2,hd/2,0,7); ctx.fillStyle='#fff'; ctx.fill();
+  }
+}
+function render(){ drawCurrent($('cur').getContext('2d')); drawNew($('new').getContext('2d')); }
+function setLook(x,y){ stopAuto(); stopTalk(); S.x=x;S.y=y; $('lx').value=x;$('ly').value=y;$('lxv').textContent=x;$('lyv').textContent=y; render(); }
+for(const k of ['lx','ly']) $(k).addEventListener('input',e=>{stopAuto();stopTalk();S[k==='lx'?'x':'y']=+e.target.value;$(k+'v').textContent=e.target.value;render();});
+$('pd').addEventListener('input',e=>{S.pd=+e.target.value;$('pdv').textContent=e.target.value;render();});
+
+let autoT=null;
+function stopAuto(){ if(autoT){clearTimeout(autoT);autoT=null;$('autoBtn').textContent='▶ 待机 saccade 演示';} }
+function toggleAuto(){
+  if(autoT){stopAuto();return;} stopTalk(); $('autoBtn').textContent='⏸ 停止';
+  const step=()=>{ const r=Math.random()*100;
+    if(r<40){S.x=0;S.y=0;var d=1500+Math.random()*2000;}
+    else if(r<85){S.x=(Math.random()*16-8)|0;S.y=(Math.random()*10-6)|0;d=2000+Math.random()*2500;}
+    else{S.x=(Math.random()*60-30)|0;S.y=(Math.random()*28-18)|0;d=700+Math.random()*700;}
+    $('lx').value=S.x;$('ly').value=S.y;$('lxv').textContent=S.x;$('lyv').textContent=S.y;render();
+    autoT=setTimeout(step,d); };
+  step();
+}
+let talkT=null;
+function stopTalk(){ if(talkT){clearTimeout(talkT);talkT=null;$('talkBtn').textContent='🗣 说话时(盯着你)';} }
+function toggleTalk(){ if(talkT){stopTalk();return;} stopAuto(); $('talkBtn').textContent='⏸ 停止';
+  S.x=0;S.y=0;$('lx').value=0;$('ly').value=0;$('lxv').textContent=0;$('lyv').textContent=0;render();
+  // 说话=盯着你不动(演示: 保持正中, 真机上还会眨眼)
+}
+render();
+</script>
+</body>
+</html>
