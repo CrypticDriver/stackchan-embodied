@@ -1,7 +1,7 @@
 # stackchan-embodied self-host overlay (git-ignored upstream; canonical copy in
 # stackchan-embodied/firmware/sdkconfig.defaults.local)
 # Body relay: device → CloudFront(wss/https) → ALB(X-Origin-Verify) → EC2 Go server :12800
-CONFIG_STACKCHAN_SERVER_URL="https://da8daz4hvc7q8.cloudfront.net"
+CONFIG_STACKCHAN_SERVER_URL="https://da8daz4hvc7q8.cloudfront.net:443"
 # Voice brain OTA: device → CloudFront → ALB → xiaozhi-server :8003
 CONFIG_OTA_URL="https://da8daz4hvc7q8.cloudfront.net/xiaozhi/ota/"
 CONFIG_STACKCHAN_SKIN_GOUDAN=y

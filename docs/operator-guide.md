@@ -64,6 +64,8 @@ esptool --chip esp32s3 --port <串口> --baud 921600 read_flash 0x0 0x1000000 st
 ### 2.2 刷自编译固件
 
 产物已存档在本仓库 `firmware/build-artifacts/`（5 个 bin + flash_args + SHA256SUMS）。
+⚠️ 必须用 2026-07-11 之后的产物（stack-chan.bin sha256 以 e92179fa 开头）——修复了 WS 客户端 URL 解析
+要求显式端口的问题（SERVER_URL 已带 :443），旧产物身体链路连不上。
 拷到电脑后先 `sha256sum -c SHA256SUMS` 校验，再刷：
 
 ```bash

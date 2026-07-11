@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>StackChan 刷机指南 (Mac) — 狗蛋固件</title>
+<style>
+  :root { --bg:#0f1420; --card:#161d2e; --line:#243049; --text:#e8ecf4; --dim:#94a3b8; --blue:#7dd3fc; --green:#86efac; --amber:#fcd34d; --red:#fca5a5; }
+  * { box-sizing:border-box; }
+  body { background:var(--bg); color:var(--text); font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif; margin:0; padding:20px 14px 80px; line-height:1.7; }
+  .wrap { max-width:820px; margin:auto; }
+  h1 { color:var(--blue); font-size:21px; margin:0 0 4px; }
+  h2 { color:var(--green); font-size:16px; margin:26px 0 8px; display:flex; align-items:center; gap:8px; }
+  .stepnum { background:var(--green); color:var(--bg); border-radius:50%; width:24px; height:24px; display:inline-flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; flex:none; }
+  .sub { color:var(--dim); font-size:12.5px; margin-bottom:16px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:14px 16px; margin:10px 0; }
+  code { background:#0b1020; border:1px solid var(--line); padding:1px 6px; border-radius:4px; font-size:12.5px; color:#c4d5f5; word-break:break-all; }
+  pre { background:#0b1020; border:1px solid var(--line); border-radius:8px; padding:12px; overflow-x:auto; font-size:12px; line-height:1.6; color:#c4d5f5; position:relative; }
+  pre b { color:var(--amber); }
+  table { border-collapse:collapse; width:100%; font-size:13px; margin:8px 0; }
+  th,td { border:1px solid var(--line); padding:6px 10px; text-align:left; }
+  th { background:#1a2338; color:var(--blue); }
+  .warn { border-left:3px solid var(--red); }
+  .ok { border-left:3px solid var(--green); }
+  .tip { border-left:3px solid var(--amber); }
+  .dim { color:var(--dim); font-size:12.5px; }
+  ul,ol { padding-left:20px; margin:6px 0; } li { margin:3px 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>📟 StackChan 刷机指南 (Mac)</h1>
+<div class="sub">固件: stack-chan v1.4.3 自编译「狗蛋版」· 2026-07-11 build (sha256 e92179fa…) · 已过四层云端验证 (镜像/鉴权回环/QEMU/表情语义) + 连接性 review</div>
+
+<div class="card ok">
+<b style="color:var(--green)">刷完你得到什么</b>
+<table>
+<tr><th></th><th>能力</th></tr>
+<tr><td>🍮</td><td><b>果冻高光眼新画风</b> — 全部表情新皮肤渲染, Angry/Sad 真撇嘴, 语音聊天自动带表情</td></tr>
+<tr><td>💤</td><td><b>待机生命感</b> — 自然眨眼(偶尔连眨)/眼神游离/嘴角微动, 远程控制时自动避让</td></tr>
+<tr><td>🧠</td><td><b>语音大脑=狗蛋</b> — 小智云出局, 对话走自建 EC2 (FunASR + Claude + 云希声)</td></tr>
+<tr><td>🦾</td><td><b>云端身体控制</b> — 远程转头/12套表情/推文字/拍照, M2 监工物理基础</td></tr>
+<tr><td>🔒</td><td><b>零公网直连</b> — 设备只连 CloudFront, 家里与 EC2 均无入站端口</td></tr>
+</table>
+</div>
+
+<div class="card warn">
+<b style="color:var(--red)">开始前 3 项检查</b>
+<ol>
+<li>USB-C 线必须是<b>数据线</b>（纯充电线识别不到串口）</li>
+<li>过程约 30 分钟, 期间 Mac 不能睡眠 — 命令都带了 <code>caffeinate -i</code> 前缀防睡眠</li>
+<li>第 1 步的备份是唯一完整后悔药, <b>没备份别刷</b></li>
+</ol>
+</div>
+
+<h2><span class="stepnum">0</span>准备: 装 esptool + 找串口</h2>
+<pre>
+pip3 install esptool
+
+# 插上 StackChan 后:
+ls /dev/cu.usbmodem*
+# 输出类似 /dev/cu.usbmodem14201 —— 记下, 后面命令替换 <b>&lt;串口&gt;</b>
+</pre>
+<div class="card tip dim">没输出? 换数据线/换 USB 口。CoreS3 是原生 USB, macOS 无需驱动。仍不行: 按住机身 BOOT 键插电(进下载模式)再 ls。</div>
+
+<h2><span class="stepnum">1</span>全片备份（必做, ~4 分钟）</h2>
+<pre>
+cd ~/Desktop
+caffeinate -i python3 -m esptool --chip esp32s3 --port <b>&lt;串口&gt;</b> --baud 921600 \
+  read_flash 0x0 0x1000000 stackchan-factory-backup.bin
+
+# 校验大小, 必须恰好 16777216:
+stat -f%z stackchan-factory-backup.bin
+</pre>
+<div class="card tip dim">
+备份传一份到 EC2 存档（可选但推荐）:<br>
+<code>scp -i &lt;你的密钥.pem&gt; stackchan-factory-backup.bin ec2-user@18.217.255.9:~/worklog/stackchan/</code>
+</div>
+
+<h2><span class="stepnum">2</span>取固件并校验</h2>
+<pre>
+git clone https://github.com/CrypticDriver/stackchan-embodied
+cd stackchan-embodied/firmware/build-artifacts
+shasum -a 256 -c SHA256SUMS      # 5 个 OK 才继续
+</pre>
+<div class="card tip dim">已 clone 过就 <code>git pull</code> —— 固件在 2026-07-11 有连接性修复, 必须用最新版 (stack-chan.bin 应为 e92179fa 开头)。</div>
+
+<h2><span class="stepnum">3</span>刷入（~2 分钟）</h2>
+<pre>
+caffeinate -i python3 -m esptool --chip esp32s3 --port <b>&lt;串口&gt;</b> --baud 460800 \
+  write_flash --flash_mode dio --flash_size 16MB --flash_freq 80m \
+  0x0 bootloader.bin \
+  0x8000 partition-table.bin \
+  0xd000 ota_data_initial.bin \
+  0x20000 stack-chan.bin \
+  0xa00000 generated_assets.bin
+</pre>
+<div class="card tip dim">报 <code>Failed to connect</code>: 按住 BOOT 键重新插电再跑。写入不稳: <code>--baud</code> 降到 115200。</div>
+
+<h2><span class="stepnum">4</span>配网</h2>
+<ul>
+<li>刷完自动重启。若原 WiFi 失效, 设备开热点 → 手机连上 → 配网页选家里 <b>2.4G</b> WiFi</li>
+<li>⚠️ 若配网页有「高级选项/OTA 地址」, 确认或填入:<br><code>https://da8daz4hvc7q8.cloudfront.net/xiaozhi/ota/</code><br><span class="dim">(编译期已内置此地址; 但若 NVS 残留旧小智地址, 手动改一次即覆盖)</span></li>
+</ul>
+
+<h2><span class="stepnum">5</span>验证（按顺序）</h2>
+<table>
+<tr><th>#</th><th>看什么</th><th>说明什么</th></tr>
+<tr><td>1</td><td>开机出现<b>果冻大眼脸</b>, 待机会眨眼/眼神游离</td><td>新皮肤+待机动画 OK</td></tr>
+<tr><td>2</td><td>对它说话 → 自称<b>狗蛋</b>、叫你大哥 (云希男声)</td><td>语音大脑已切自建</td></tr>
+<tr><td>3</td><td>说话时有表情+嘴动</td><td>情绪事件链路 OK</td></tr>
+<tr><td>4</td><td>把设备 MAC 发给 Claude (配网页/路由器可查)</td><td>云端联调: 远程转头/表情/拍照冒烟</td></tr>
+</table>
+<div class="card tip dim">EC2 侧实时日志: <code>journalctl -u stackchan-xiaozhi -f</code>(语音) / <code>journalctl -u stackchan-goserver -f</code>(身体, 设备 WS 连入可见 MAC)。<br>已知小项: 首次连身体 relay 可能 401 一两次 (SNTP 校时未完成), 自动重连即好。</div>
+
+<h2><span class="stepnum">↩</span>回滚（万一）</h2>
+<table>
+<tr><th>层级</th><th>场景</th><th>操作</th></tr>
+<tr><td>L1</td><td>行为不对/想回出厂</td><td><code>python3 -m esptool --chip esp32s3 --port &lt;串口&gt; write_flash 0x0 stackchan-factory-backup.bin</code> (整片恢复, 100% 出厂态)</td></tr>
+<tr><td>L2</td><td>备份丢失</td><td>M5Burner 下载官方 StackChan 固件重刷 (回官方云)</td></tr>
+<tr><td>L3</td><td>不启动 (几乎不可能)</td><td>按住 BOOT 插电进下载模式 → 走 L1/L2。ESP32-S3 的 ROM bootloader 在掩膜 ROM 里, 流程不碰 eFuse, <b>物理上刷不成砖</b></td></tr>
+</table>
+
+<div class="card dim" style="margin-top:24px">
+固件验证记录: 镜像 checksum/hash 有效 · 固件 C++ 鉴权代码宿主编译连真实 relay 过鉴权(101)+防重放(401) · QEMU esp32s3 启动到 app · 表情语义 11 项全过 · 连接性 review: WS 客户端 URL 解析要求显式端口, SERVER_URL 已带 :443 (2026-07-11 修复) · E2E 语音管线 CloudFront 路径 PASS。<br>
+详情: <a style="color:var(--blue)" href="firmware-verification.md">firmware-verification.md</a> · <a style="color:var(--blue)" href="operator-guide.md">operator-guide.md</a>
+</div>
+
+</div>
+</body>
+</html>
