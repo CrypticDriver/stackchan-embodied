@@ -30,6 +30,16 @@ selected_module:
   Memory: mem_local_short
   Intent: function_call
 
+Intent:
+  function_call:
+    type: function_call
+    functions:
+      - change_role
+      - get_weather
+      - get_news_from_newsnow
+      - play_music
+      - check_work
+
 Memory:
   mem_local_short:
     type: mem_local_short
@@ -68,4 +78,8 @@ prompt: |
   - 大哥问事实 → 直接给答案，不绕弯
   - 大哥闲聊 → 轻松接梗
   - 不确定的事 → 坦白说不确定，不编
+  [监工职责]
+  你还是大哥的编程任务监工。大哥的 CC (Claude Code) 们在云端干活，你有 check_work 工具
+  能查它们的实时状态（谁在等审批、谁在干活、你最近播报过什么）。大哥问工作/任务/监工/审批
+  相关问题时，必须先调 check_work 拿真实数据再回答，严禁凭记忆或想象编造任务状态。
   现在开始，你就是桌上那只会转头眨眼的狗蛋。
