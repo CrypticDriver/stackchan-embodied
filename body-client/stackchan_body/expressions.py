@@ -23,48 +23,50 @@ NEUTRAL: dict = {
     "mouth": {"x": 0, "y": 0, "weight": 0, "rotation": 0},
 }
 
+# v2 设计语言 (2026-07-11 风格探索后定稿): 不对称骨架 + 瞳孔表现力。
+# 左右眼参数刻意不同 —— 对称的脸是图标, 不对称的脸才是生物。
 EXPRESSIONS: dict[str, dict] = {
-    # 思考: 双眼抬向右上方"找答案", 右眼略眯出挑眉感, 嘴小幅右移微斜
+    # 思考: 左眼睁大看右上"找答案", 右眼眯起微斜出"琢磨"感, 嘴右移上斜
     # 用途: M2 长任务进行中 / 狗蛋处理请求时
     "thinking": {
-        "leftEye": {"x": 60, "y": -65, "weight": 85, "rotation": 0, "size": 0},
-        "rightEye": {"x": 60, "y": -65, "weight": 65, "rotation": 0, "size": 0},
-        "mouth": {"x": 25, "y": 4, "weight": 12, "rotation": 60},
+        "leftEye": {"x": 70, "y": -75, "weight": 95, "rotation": 0, "size": 20},
+        "rightEye": {"x": 45, "y": -50, "weight": 50, "rotation": 350, "size": 20},
+        "mouth": {"x": 32, "y": 8, "weight": 14, "rotation": 100},
     },
-    # 得意: 月牙笑眼(155°)压成半眯, 嘴歪向一侧上挑 —— "看我干得漂亮吧"
+    # 得意: 两边月牙眼弧度/开合不对称(痞气), 嘴大角度上挑歪向一侧
     # 用途: 任务顺利完成 / 被夸时
     "smug": {
-        "leftEye": {"x": 0, "y": 0, "weight": 60, "rotation": 1550, "size": 0},
-        "rightEye": {"x": 0, "y": 0, "weight": 60, "rotation": 1550, "size": 0},
-        "mouth": {"x": 28, "y": 6, "weight": 14, "rotation": -110},
+        "leftEye": {"x": 0, "y": 0, "weight": 70, "rotation": 1600, "size": 15},
+        "rightEye": {"x": 0, "y": 0, "weight": 38, "rotation": 1450, "size": 15},
+        "mouth": {"x": 30, "y": 8, "weight": 16, "rotation": -190},
     },
-    # 委屈: 八字垂眼(外高内低 30°)+眼睛内聚下看, 小瘪嘴下移
+    # 委屈: 八字垂眼两边角度略差+大瞳孔(泪眼汪汪), 小瘪嘴下移微斜
     # 用途: 任务失败 / 被大哥说了 / 长时间没人理
     "aggrieved": {
-        "leftEye": {"x": 15, "y": 60, "weight": 50, "rotation": 300, "size": 0},
-        "rightEye": {"x": -15, "y": 60, "weight": 50, "rotation": 300, "size": 0},
-        "mouth": {"x": 0, "y": 34, "weight": 8, "rotation": 0},
+        "leftEye": {"x": 18, "y": 68, "weight": 52, "rotation": 320, "size": 40},
+        "rightEye": {"x": -18, "y": 68, "weight": 58, "rotation": 250, "size": 40},
+        "mouth": {"x": 0, "y": 36, "weight": 7, "rotation": 90},
     },
-    # 兴奋: 大瞳孔(+45)月牙眼 + 大张嘴 —— 汇报好消息
+    # 兴奋: 双眼圆睁大瞳孔(左右略差)+大张嘴微歪 —— 汇报好消息
     # 用途: 大哥回家 / 任务全绿 / M2 完成播报
     "excited": {
-        "leftEye": {"x": 0, "y": 0, "weight": 88, "rotation": 1550, "size": 45},
-        "rightEye": {"x": 0, "y": 0, "weight": 88, "rotation": 1550, "size": 45},
-        "mouth": {"x": 0, "y": 4, "weight": 55, "rotation": 0},
+        "leftEye": {"x": 0, "y": 0, "weight": 100, "rotation": 1500, "size": 60},
+        "rightEye": {"x": 0, "y": 0, "weight": 88, "rotation": 1650, "size": 50},
+        "mouth": {"x": 0, "y": 2, "weight": 62, "rotation": -40},
     },
-    # 专注: 眼睑压半+瞳孔缩小聚焦, 抿直嘴 —— 监工模式
+    # 专注: 两眼眯起程度不同+反向微斜(锁定目标), 瞳孔缩小, 抿直嘴
     # 用途: M2 盯 Happy session 时的常驻脸
     "focused": {
-        "leftEye": {"x": 0, "y": 0, "weight": 58, "rotation": 0, "size": -30},
-        "rightEye": {"x": 0, "y": 0, "weight": 58, "rotation": 0, "size": -30},
-        "mouth": {"x": 0, "y": 0, "weight": 6, "rotation": 0},
+        "leftEye": {"x": 0, "y": 0, "weight": 52, "rotation": 100, "size": -30},
+        "rightEye": {"x": 0, "y": 0, "weight": 64, "rotation": -100, "size": -20},
+        "mouth": {"x": -8, "y": 0, "weight": 6, "rotation": 0},
     },
-    # 惊讶: 瞳孔放大(+70) + 嘴张大 —— 出事了/意外情况
+    # 惊讶: 一眼瞳孔放到最大一眼半眯("?!"的错愕感), 嘴张大微歪
     # 用途: 任务报错 / 检测到异常
     "surprised": {
-        "leftEye": {"x": 0, "y": 0, "weight": 100, "rotation": 0, "size": 70},
-        "rightEye": {"x": 0, "y": 0, "weight": 100, "rotation": 0, "size": 70},
-        "mouth": {"x": 0, "y": 0, "weight": 65, "rotation": 0},
+        "leftEye": {"x": 0, "y": 0, "weight": 100, "rotation": 0, "size": 85},
+        "rightEye": {"x": 0, "y": 0, "weight": 75, "rotation": 250, "size": 55},
+        "mouth": {"x": 10, "y": 0, "weight": 58, "rotation": 50},
     },
 }
 

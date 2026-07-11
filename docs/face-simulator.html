@@ -165,13 +165,13 @@ const P = {
   doubt:  { lw:75,lr:0, rw:75,rr:0, mw:0 },
   sleepy: { lw:35,lr:-50, rw:35,rr:-50, mw:8, my:14 },
   wink:   { lw:100,lr:0, rw:10,rr:1550, mw:22, my:8, mx:18, mr:-80 },
-  // —— 狗蛋专属预设，参数与 body-client stackchan_body/expressions.py 逐字一致 ——
-  g_thinking:  { lx:60,ly:-65,lw:85,lr:0,ls:0, rx:60,ry:-65,rw:65,rr:0,rs:0, mx:25,my:4,mw:12,mr:60 },
-  g_smug:      { lw:60,lr:1550,ls:0, rw:60,rr:1550,rs:0, mx:28,my:6,mw:14,mr:-110 },
-  g_aggrieved: { lx:15,ly:60,lw:50,lr:300,ls:0, rx:-15,ry:60,rw:50,rr:300,rs:0, my:34,mw:8,mr:0 },
-  g_excited:   { lw:88,lr:1550,ls:45, rw:88,rr:1550,rs:45, my:4,mw:55,mr:0 },
-  g_focused:   { lw:58,lr:0,ls:-30, rw:58,rr:0,rs:-30, mw:6,mr:0 },
-  g_surprised: { lw:100,lr:0,ls:70, rw:100,rr:0,rs:70, mw:65,mr:0 },
+  // —— 狗蛋专属预设 v2 (不对称骨架+瞳孔表现力)，与 stackchan_body/expressions.py 逐字一致 ——
+  g_thinking:  { lx:70,ly:-75,lw:95,lr:0,ls:20, rx:45,ry:-50,rw:50,rr:350,rs:20, mx:32,my:8,mw:14,mr:100 },
+  g_smug:      { lw:70,lr:1600,ls:15, rw:38,rr:1450,rs:15, mx:30,my:8,mw:16,mr:-190 },
+  g_aggrieved: { lx:18,ly:68,lw:52,lr:320,ls:40, rx:-18,ry:68,rw:58,rr:250,rs:40, my:36,mw:7,mr:90 },
+  g_excited:   { lw:100,lr:1500,ls:60, rw:88,rr:1650,rs:50, my:2,mw:62,mr:-40 },
+  g_focused:   { lw:52,lr:100,ls:-30, rw:64,rr:-100,rs:-20, mx:-8,mw:6,mr:0 },
+  g_surprised: { lw:100,lr:0,ls:85, rw:75,rr:250,rs:55, mx:10,mw:58,mr:50 },
 };
 function preset(name){ const base={ lx:0,ly:0,lw:100,lr:0,ls:0, rx:0,ry:0,rw:100,rr:0,rs:0, mx:0,my:0,mw:0,mr:0 }; apply({...base, ...P[name]}); }
 
