@@ -31,33 +31,34 @@ EXPRESSIONS: dict[str, dict] = {
     "thinking": {
         "leftEye": {"x": 70, "y": -75, "weight": 95, "rotation": 0, "size": 20},
         "rightEye": {"x": 45, "y": -50, "weight": 50, "rotation": 350, "size": 20},
-        "mouth": {"x": 32, "y": 8, "weight": 14, "rotation": 100},
+        "mouth": {"x": 32, "y": 8, "weight": 14, "rotation": -100},
     },
     # 得意: 两边月牙眼弧度/开合不对称(痞气), 嘴大角度上挑歪向一侧
     # 用途: 任务顺利完成 / 被夸时
     "smug": {
-        "leftEye": {"x": 0, "y": 0, "weight": 70, "rotation": 1600, "size": 15},
+        "leftEye": {"x": 0, "y": 0, "weight": 70, "rotation": -1600, "size": 15},
         "rightEye": {"x": 0, "y": 0, "weight": 38, "rotation": 1450, "size": 15},
-        "mouth": {"x": 30, "y": 8, "weight": 16, "rotation": -190},
+        "mouth": {"x": 30, "y": 8, "weight": 16, "rotation": 190},
     },
-    # 委屈: 八字垂眼两边角度略差+大瞳孔(泪眼汪汪), 小瘪嘴下移微斜
+    # 委屈: 八字垂眼两边角度略差+大瞳孔(泪眼汪汪), 倒扣撇嘴微斜
+    # (mouth.rotation 135°-225° 区间 = goudan skin 撇嘴模式, 1710 = 撇嘴+9°斜)
     # 用途: 任务失败 / 被大哥说了 / 长时间没人理
     "aggrieved": {
-        "leftEye": {"x": 18, "y": 68, "weight": 52, "rotation": 320, "size": 40},
+        "leftEye": {"x": 18, "y": 68, "weight": 52, "rotation": -320, "size": 40},
         "rightEye": {"x": -18, "y": 68, "weight": 58, "rotation": 250, "size": 40},
-        "mouth": {"x": 0, "y": 36, "weight": 7, "rotation": 90},
+        "mouth": {"x": 0, "y": 36, "weight": 7, "rotation": 1710},
     },
     # 兴奋: 双眼圆睁大瞳孔(左右略差)+大张嘴微歪 —— 汇报好消息
     # 用途: 大哥回家 / 任务全绿 / M2 完成播报
     "excited": {
-        "leftEye": {"x": 0, "y": 0, "weight": 100, "rotation": 1500, "size": 60},
+        "leftEye": {"x": 0, "y": 0, "weight": 100, "rotation": -1500, "size": 60},
         "rightEye": {"x": 0, "y": 0, "weight": 88, "rotation": 1650, "size": 50},
-        "mouth": {"x": 0, "y": 2, "weight": 62, "rotation": -40},
+        "mouth": {"x": 0, "y": 2, "weight": 62, "rotation": 40},
     },
     # 专注: 两眼眯起程度不同+反向微斜(锁定目标), 瞳孔缩小, 抿直嘴
     # 用途: M2 盯 Happy session 时的常驻脸
     "focused": {
-        "leftEye": {"x": 0, "y": 0, "weight": 52, "rotation": 100, "size": -30},
+        "leftEye": {"x": 0, "y": 0, "weight": 52, "rotation": -100, "size": -30},
         "rightEye": {"x": 0, "y": 0, "weight": 64, "rotation": -100, "size": -20},
         "mouth": {"x": -8, "y": 0, "weight": 6, "rotation": 0},
     },
@@ -66,7 +67,7 @@ EXPRESSIONS: dict[str, dict] = {
     "surprised": {
         "leftEye": {"x": 0, "y": 0, "weight": 100, "rotation": 0, "size": 85},
         "rightEye": {"x": 0, "y": 0, "weight": 75, "rotation": 250, "size": 55},
-        "mouth": {"x": 10, "y": 0, "weight": 58, "rotation": 50},
+        "mouth": {"x": 10, "y": 0, "weight": 58, "rotation": -50},
     },
 }
 

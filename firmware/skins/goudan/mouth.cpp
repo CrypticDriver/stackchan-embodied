@@ -110,8 +110,22 @@ void GoudanMouth::setWeight(int weight)
 void GoudanMouth::setRotation(int rotation)
 {
     Element::setRotation(rotation);
-    lv_obj_set_style_transform_rotation(_arc, rotation, LV_PART_MAIN);
-    _open_mouth->setRotation(rotation);
+
+    // 语义扩展: rotation 落在 135°-225° 区间 = 倒扣撇嘴(frown), 偏差为撇嘴斜度。
+    // 让 0x03 JSON 通道也能做撇嘴 (rotation:1800=纯撇嘴, 1710=左斜 9° 撇嘴)。
+    int r = ((rotation % 3600) + 3600) % 3600;
+    int tilt;
+    if (r >= 1350 && r <= 2250) {
+        _is_frown = true;
+        tilt      = r - 1800;
+    } else {
+        _is_frown = false;
+        tilt      = (r > 1800) ? r - 3600 : r;
+    }
+
+    lv_obj_set_style_transform_rotation(_arc, tilt, LV_PART_MAIN);
+    _open_mouth->setRotation(tilt);
+    relayout();
 }
 
 void GoudanMouth::setEmotion(const Emotion& emotion)
