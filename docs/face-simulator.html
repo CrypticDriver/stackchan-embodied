@@ -43,6 +43,7 @@
       <button onclick="preset('sleepy')">😪 Sleepy</button>
       <button onclick="preset('wink')">😉 眨单眼*</button>
       <button onclick="preset('talk')" id="talkBtn">🗣 说话动画</button>
+      <button id="idleBtn">💤 待机动画</button>
     </div>
     <div class="presets" style="border-top:1px solid var(--line);padding-top:10px">
       <span style="color:var(--blue);font-size:12px;align-self:center">狗蛋专属 (expressions.py)：</span>
@@ -177,12 +178,42 @@ function preset(name){ const base={ lx:0,ly:0,lw:100,lr:0,ls:0, rx:0,ry:0,rw:100
 
 // 说话动画: 语音链路里嘴部 weight 由 TTS 音量驱动, 这里用正弦模拟
 let talkTimer=null;
-function stopTalk(){ if(talkTimer){ clearInterval(talkTimer); talkTimer=null; $('talkBtn').textContent='🗣 说话动画'; } }
+function stopTalkAndIdle(){ if(typeof stopIdle==='function' && idleTimers && idleTimers.length) stopIdle(); }
+function stopTalk(){ stopTalkAndIdle(); if(talkTimer){ clearInterval(talkTimer); talkTimer=null; $('talkBtn').textContent='🗣 说话动画'; } }
 document.getElementById('talkBtn').onclick = () => {
   if (talkTimer) { stopTalk(); render(); return; }
   $('talkBtn').textContent='⏸ 停止';
   let t=0;
   talkTimer=setInterval(()=>{ t+=0.25; S.mw=Math.round(30+28*Math.abs(Math.sin(t*2.1))+12*Math.abs(Math.sin(t*3.7))); $('mw').value=S.mw; $('mwv').textContent=S.mw; render(); }, 50);
+};
+
+
+// 待机动画: 复刻固件 IdleLifeModifier 的三通道节奏 (眨眼/瞳孔漂移/嘴部微动)
+let idleTimers=[];
+function stopIdle(){ idleTimers.forEach(clearTimeout); idleTimers=[]; $('idleBtn').textContent='💤 待机动画'; }
+$('idleBtn').onclick = () => {
+  if (idleTimers.length) { stopIdle(); return; }
+  stopTalk(); $('idleBtn').textContent='⏸ 停止待机';
+  const rnd=(a,b)=>a+Math.random()*(b-a);
+  function blink(){
+    const bl=S.lw, br=S.rw;
+    S.lw=6; S.rw=6; render();
+    idleTimers.push(setTimeout(()=>{ S.lw=bl; S.rw=br; render();
+      idleTimers.push(setTimeout(blink, Math.random()<0.18?400:rnd(4200,5800)));
+    },140));
+  }
+  function drift(){
+    if (Math.random()<0.12) { S.lx=S.rx=0; S.ly=S.ry=0; }
+    else { const dx=rnd(-26,26)|0, dy=rnd(-16,12)|0; S.lx=S.rx=dx; S.ly=S.ry=dy; }
+    for(const k of ['lx','ly','rx','ry']){ $(k).value=S[k]; $(k+'v').textContent=S[k]; }
+    render();
+    idleTimers.push(setTimeout(drift, rnd(2500,6000)));
+  }
+  function mouth(){
+    S.mw=rnd(12,26)|0; $('mw').value=S.mw; $('mwv').textContent=S.mw; render();
+    idleTimers.push(setTimeout(mouth, rnd(6000,14000)));
+  }
+  idleTimers.push(setTimeout(blink,1200), setTimeout(drift,2000), setTimeout(mouth,3000));
 };
 
 preset('happy');
