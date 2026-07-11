@@ -41,7 +41,7 @@
 <body>
 <div class="wrap">
 <h1>🐕 狗蛋控制台 <span id="clock" style="font-size:12px;color:var(--dim);font-weight:400"></span></h1>
-<div class="sub">StackChan Embodied · 脑在云端(EC2 us-east-2)，桌上是身体 · 本页只读</div>
+<div class="sub">StackChan Embodied · 脑+语音在 us-west-2，监工/控制台在 us-east-2，桌上是身体 · 本页只读</div>
 
 <div class="card">
   <div class="tokenbar">
@@ -52,22 +52,20 @@
 </div>
 
 <h2>📊 实时状态</h2>
+<div class="sub">🌎 us-west-2 (语音栈 + 大脑同机) · 🏠 us-east-2 (监工 + 控制台)</div>
 <div class="grid">
-  <div class="card"><div class="stat"><div class="dot unk" id="d-device"></div><div><div class="k">StackChan 设备 (44:1b:f6:e3:85:e4)</div><div class="v" id="v-device">—</div></div></div></div>
-  <div class="card"><div class="stat"><div class="dot unk" id="d-xiaozhi"></div><div><div class="k">语音大脑 xiaozhi-server</div><div class="v" id="v-xiaozhi">—</div></div></div></div>
-  <div class="card"><div class="stat"><div class="dot unk" id="d-openclaw"></div><div><div class="k">🧠 小狗蛋本体 OpenClaw (us-west-2)</div><div class="v" id="v-openclaw">—</div></div></div></div>
-  <div class="card"><div class="stat"><div class="dot unk" id="d-litellm"></div><div><div class="k">辅脑 LiteLLM (视觉/记忆/备胎)</div><div class="v" id="v-litellm">—</div></div></div></div>
-  <div class="card"><div class="stat"><div class="dot unk" id="d-goserver"></div><div><div class="k">身体 relay Go server</div><div class="v" id="v-goserver">—</div></div></div></div>
-  <div class="card"><div class="stat"><div class="dot unk" id="d-watcher"></div><div><div class="k">监工 happy-watcher (M2)</div><div class="v" id="v-watcher">—</div></div></div></div>
-  <div class="card"><div class="stat"><div class="dot unk" id="d-brainrouter"></div><div><div class="k">脑体总线 brain-router (异步应答)</div><div class="v" id="v-brainrouter">—</div></div></div></div>
+  <div class="card"><div class="stat"><div class="dot unk" id="d-device"></div><div><div class="k">🤖 StackChan 设备 (44:1b:f6:e3:85:e4)</div><div class="v" id="v-device">—</div></div></div></div>
+  <div class="card"><div class="stat"><div class="dot unk" id="d-uswest"></div><div><div class="k">🌎 语音栈 us-west (OTA/ASR/TTS)</div><div class="v" id="v-uswest">—</div></div></div></div>
+  <div class="card"><div class="stat"><div class="dot unk" id="d-openclaw"></div><div><div class="k">🧠 小狗蛋大脑 OpenClaw (us-west)</div><div class="v" id="v-openclaw">—</div></div></div></div>
+  <div class="card"><div class="stat"><div class="dot unk" id="d-watcher"></div><div><div class="k">🏠 监工 happy-watcher (us-east)</div><div class="v" id="v-watcher">—</div></div></div></div>
+  <div class="card"><div class="stat"><div class="dot unk" id="d-goserver"></div><div><div class="k">🏠 身体 relay Go server (us-east)</div><div class="v" id="v-goserver">—</div></div></div></div>
+  <div class="card"><div class="stat"><div class="dot unk" id="d-console"></div><div><div class="k">🏠 控制台 (us-east)</div><div class="v" id="v-console">—</div></div></div></div>
 </div>
 
 <div class="card">
   <table>
-    <tr><td>最近听到</td><td id="v-heard">—</td></tr>
-    <tr><td>最近说了</td><td id="v-said">—</td></tr>
-    <tr><td>30 分钟对话数</td><td id="v-chats">—</td></tr>
-    <tr><td>EC2 资源</td><td id="v-host">—</td></tr>
+    <tr><td>对话明细</td><td class="muted">已随语音栈迁至 us-west-2 · <code>journalctl -u stackchan-xiaozhi</code> (dogegg)</td></tr>
+    <tr><td>us-east 资源</td><td id="v-host">—</td></tr>
   </table>
 </div>
 
@@ -116,7 +114,7 @@
 
   <!-- EC2 -->
   <rect x="560" y="20" width="290" height="480" rx="12" fill="none" stroke="#243049" stroke-dasharray="4 4"/>
-  <text x="575" y="42" fill="#94a3b8" font-size="12">🖥 EC2 (SG 只放 ALB)</text>
+  <text x="575" y="42" fill="#94a3b8" font-size="12">🖥 us-west-2 dogegg (语音+大脑同机, SG 只放 ALB)</text>
 
   <rect x="580" y="58" width="250" height="86" rx="10" fill="#161d2e" stroke="#86efac"/>
   <text x="705" y="80" fill="#86efac" font-size="12" text-anchor="middle">🧠 xiaozhi-server :8000/:8003</text>
@@ -200,22 +198,29 @@ async function refresh(){
     if (r.status === 401) { $('apierr').textContent = 'token 不对'; return; }
     const d = await r.json();
     $('apierr').textContent = '';
-    setDot('openclaw', (d.openclaw||{}).reachable ?? null);
-    const br = d.brainrouter||{};
-    setDot('brainrouter', br.ok ?? null);
-    $('v-brainrouter').textContent = br.ok ? (br.background_jobs>0 ? `在忙 (${br.background_jobs} 个后台任务)` : '空闲') : '不可达';
-    $('v-openclaw').textContent = (d.openclaw||{}).reachable ? '在线 (peering)' : '不可达';
-    for (const k of ['xiaozhi','litellm','goserver','watcher']) {
-      setDot(k, d.services[k].active);
-      $('v-'+k).textContent = d.services[k].active ? '运行中' : '已停止';
+    const svc = d.services || {};
+    // us-east 本机服务 (API 直报 systemd 状态)
+    for (const k of ['watcher','goserver','console']) {
+      const on = svc[k] ? svc[k].active : null;
+      setDot(k, on);
+      if ($('v-'+k)) $('v-'+k).textContent = on===null ? '未知' : on ? '运行中' : '已停止';
     }
-    const dev = d.device;
-    setDot('device', dev.voice_ws_connected_recently);
-    $('v-device').textContent = dev.voice_ws_connected_recently ? '在线 (30min 内有语音连接)' : '近 30min 无连接';
-    $('v-heard').textContent = dev.last_heard || '—';
-    $('v-said').textContent = dev.last_said || '—';
-    $('v-chats').textContent = dev.chats_30min;
-    $('v-host').textContent = `内存 ${d.host.mem_used_mb}/${d.host.mem_total_mb}MB · 磁盘 ${d.host.disk_used_pct} · load ${d.host.load.join(' ')}`;
+    // us-west 语音栈 (经 ALB 探 OTA)
+    const uw = d.uswest_voice || {};
+    setDot('uswest', uw.voice_ota_ok ?? null);
+    $('v-uswest').textContent = uw.voice_ota_ok ? `在线 (${uw.region||'us-west-2'})` : `不可达 (${uw.http||'?'})`;
+    // 大脑
+    setDot('openclaw', (d.openclaw||{}).reachable ?? null);
+    $('v-openclaw').textContent = (d.openclaw||{}).reachable ? '在线 (loopback+peering)' : '不可达';
+    // 设备
+    const dev = d.device || {};
+    setDot('device', dev.voice_ws_connected_recently ?? null);
+    $('v-device').textContent = dev.voice_ws_connected_recently ? '在线 (30min 内有语音)' : '近 30min 无连接';
+    if ($('v-heard')) $('v-heard').textContent = dev.last_heard || '—';
+    if ($('v-said')) $('v-said').textContent = dev.last_said || '—';
+    if ($('v-chats')) $('v-chats').textContent = dev.chats_30min ?? '—';
+    const h = d.host || {};
+    if ($('v-host')) $('v-host').textContent = h.mem_total_mb ? `内存 ${h.mem_used_mb}/${h.mem_total_mb}MB · 磁盘 ${h.disk_used_pct} · load ${(h.load||[]).join(' ')}` : '—';
     // M2 面板
     const cc = d.cc_sessions || {};
     if (!cc.error) {

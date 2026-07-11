@@ -44,6 +44,14 @@ def service_status() -> dict:
 
 
 def device_activity() -> dict:
+    # 注: 语音栈已搬 us-west, 本机 journald 无对话明细。此函数仅保留 device_id 标识;
+    # 在线状态改由 uswest_voice OTA 探测间接反映。对话明细需去 us-west 看 journalctl。
+    return {"mac": DEVICE_MAC, "note": "对话明细已随语音栈迁至 us-west-2",
+            "voice_ws_connected_recently": None,
+            "last_heard": None, "last_said": None, "chats_30min": None}
+
+
+def _device_activity_legacy() -> dict:
     """从 journald 提取设备最近活动。"""
     logs = _run(["journalctl", "-u", "stackchan-xiaozhi", "--since", "-30min",
                  "-o", "cat", "--no-pager"], timeout=8)
