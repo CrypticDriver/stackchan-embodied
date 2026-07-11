@@ -107,6 +107,14 @@ def sessions_overview() -> dict:
         return {"error": str(e)}
 
 
+def openclaw_status() -> dict:
+    """小狗蛋本体 (us-west-2 OpenClaw gateway, VPC peering) 健康检查。"""
+    out = _run(["curl", "-s", "-m", "4", "-o", "/dev/null", "-w", "%{http_code}",
+                "http://10.0.1.80:18790/v1/models",
+                "-H", f"Authorization: Bearer {os.environ.get('OPENCLAW_TOKEN','')}"], timeout=6)
+    return {"reachable": out == "200", "http": out}
+
+
 def host_status() -> dict:
     mem = _run(["free", "-m"]).split("\n")
     mem_line = mem[1].split() if len(mem) > 1 else ["", "0", "0"]
@@ -129,6 +137,7 @@ async def status(request: web.Request) -> web.Response:
         "services": service_status(),
         "device": device_activity(),
         "watcher": watcher_status(),
+        "openclaw": openclaw_status(),
         "cc_sessions": sessions_overview(),
         "host": host_status(),
     }, headers={"Cache-Control": "no-store"})
