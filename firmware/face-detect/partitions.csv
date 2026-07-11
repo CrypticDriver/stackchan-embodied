@@ -1,0 +1,12 @@
+# ESP-IDF Partition Table
+# Name,   Type, SubType, Offset,  Size, Flags
+# M3 (本地人脸检测): esp-dl 推理运行时+内嵌模型使 app 增至 ~5.65MB,
+# 原 5.06MB OTA 槽装不下。扩到 6.02MB/槽 (保留双 OTA 可回滚), assets 缩到 4.39MB
+# (实测占用 4.02MB, 余量足)。nvs/otadata 偏移不变, 现网配置不丢。
+nvs,      data, nvs,     0x9000,    0x4000,
+otadata,  data, ota,     0xd000,    0x2000,
+phy_init, data, phy,     0xf000,    0x1000,
+ota_0,    app,  ota_0,   0x20000,   0x5C0000,
+ota_1,    app,  ota_1,   0x5E0000,  0x5C0000,
+assets,   data, spiffs,  0xBA0000,  0x430000,
+coredump, data, coredump,0xFD0000,  0x10000,

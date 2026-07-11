@@ -31,7 +31,12 @@
 <div class="wrap">
 
 <h1>📟 StackChan 刷机指南 (Mac)</h1>
-<div class="sub">固件: stack-chan v1.4.3 自编译「狗蛋版」· 2026-07-11 build (sha256 e92179fa…) · 已过四层云端验证 (镜像/鉴权回环/QEMU/表情语义) + 连接性 review</div>
+<div class="sub">固件: stack-chan v1.4.3 自编译「狗蛋版」· 2026-07-11 M3 build (sha256 7f2d87fb…) · 新增本地人脸检测 (esp-dl, 全程本机不上传) · 已过四层云端验证 (镜像/鉴权回环/QEMU/表情语义)</div>
+
+<div class="card warn">
+<b style="color:var(--red)">⚠️ 本次 (M3) 分区表变了 — 必须整套刷</b>
+<div class="dim">人脸检测的 esp-dl 运行时+模型让固件从 3.7MB 长到 5.65MB, 原 5.06MB 的 OTA 槽装不下, 已把每个 OTA 槽扩到 6.02MB、assets 分区从 <code>0xa00000</code> 移到 <code>0xba0000</code>。<b>务必按第 3 步刷入新的 partition-table.bin, 且 assets 用新地址 0xba0000</b> — 只刷 app 会因分区不匹配而起不来。nvs/otadata 偏移没动, 家里 WiFi/配置不丢。照第 1 步做了全片备份就万无一失。</div>
+</div>
 
 <div class="card ok">
 <b style="color:var(--green)">刷完你得到什么</b>
@@ -94,7 +99,7 @@ caffeinate -i python3 -m esptool --chip esp32s3 --port <b>&lt;串口&gt;</b> --b
   0x8000 partition-table.bin \
   0xd000 ota_data_initial.bin \
   0x20000 stack-chan.bin \
-  0xa00000 generated_assets.bin
+  0xba0000 generated_assets.bin
 </pre>
 <div class="card tip dim">报 <code>Failed to connect</code>: 按住 BOOT 键重新插电再跑。写入不稳: <code>--baud</code> 降到 115200。</div>
 

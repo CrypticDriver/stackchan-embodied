@@ -1,0 +1,53 @@
+// === main/hal/board/stackchan_camera.cc — M3 新增/改动片段 (参考) ===
+// 1) Capture() 开头加锁 (与人脸检测串行):
+//    std::lock_guard<std::mutex> lock(frame_mutex_);
+
+// 2) 新增静默取帧函数:
+bool StackChanCamera::GrabForDetect(uint8_t* dst, size_t dst_cap, int& out_w, int& out_h)
+{
+    // 拍照进行中就跳过这一轮 (try_lock 不阻塞主拍照路径)
+    std::unique_lock<std::mutex> lock(frame_mutex_, std::try_to_lock);
+    if (!lock.owns_lock()) {
+        return false;
+    }
+    if (!streaming_on_ || video_fd_ < 0) {
+        return false;
+    }
+    // 只支持 RGB565 (传感器当前输出), 其余格式本地检测暂不处理
+    if (sensor_format_ != V4L2_PIX_FMT_RGB565) {
+        return false;
+    }
+
+    struct v4l2_buffer buf = {};
+    buf.type               = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+    buf.memory             = V4L2_MEMORY_MMAP;
+    if (ioctl(video_fd_, VIDIOC_DQBUF, &buf) != 0) {
+        return false;
+    }
+
+    // ROTATE 未启用时 frame_.width/height 即传感器原始输出尺寸, 与 mmap buffer 一致
+    const int w         = frame_.width;
+    const int h         = frame_.height;
+    const size_t need   = (size_t)w * (size_t)h * 2;
+    bool ok             = false;
+    if (dst && dst_cap >= need && buf.bytesused >= need) {
+#ifdef CONFIG_XIAOZHI_ENABLE_CAMERA_ENDIANNESS_SWAP
+        auto src16   = (uint16_t*)mmap_buffers_[buf.index].start;
+        auto dst16   = (uint16_t*)dst;
+        size_t count = need / 2;
+        for (size_t i = 0; i < count; i++) {
+            dst16[i] = __builtin_bswap16(src16[i]);
+        }
+#else
+        memcpy(dst, mmap_buffers_[buf.index].start, need);
+#endif
+        out_w = w;
+        out_h = h;
+        ok    = true;
+    }
+
+    if (ioctl(video_fd_, VIDIOC_QBUF, &buf) != 0) {
+        ESP_LOGE(TAG, "GrabForDetect: VIDIOC_QBUF failed");
+    }
+    return ok;
+}

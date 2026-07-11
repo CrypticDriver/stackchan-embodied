@@ -3,4 +3,4 @@
 0x20000 stack-chan.bin
 0x8000 partition_table/partition-table.bin
 0xd000 ota_data_initial.bin
-0xa00000 generated_assets.bin
+0xba0000 generated_assets.bin
