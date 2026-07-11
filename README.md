@@ -8,7 +8,7 @@
 
 **[docs/ROADMAP.html](docs/ROADMAP.html)** — 完整的具身智能玩法路线图（M1-M5），交付 Claude Code 执行。
 
-在线预览: https://htmlpreview.github.io/?https://github.com/CrypticDriver/stackchan-embodied/blob/main/docs/ROADMAP.html
+在线预览: https://crypticdriver.github.io/stackchan-embodied/ROADMAP.html
 
 ## 架构一图流
 
@@ -46,3 +46,8 @@ StackChan 固件 = 纯身体 (语音链路免刷: 配网门户改 OTA 地址;
 
 ---
 *by 狗蛋 🐕 for 大哥 · 2026-07-10*
+
+## 在线页面 (GitHub Pages, 无缓存问题)
+
+- 表情模拟器: https://crypticdriver.github.io/stackchan-embodied/face-simulator.html
+- 路线图: https://crypticdriver.github.io/stackchan-embodied/ROADMAP.html
