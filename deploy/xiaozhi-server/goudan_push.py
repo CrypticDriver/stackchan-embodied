@@ -10,6 +10,7 @@
 
 import asyncio
 import json
+import os
 import time
 
 from aiohttp import web
@@ -59,7 +60,12 @@ ConnectionHandler.__setattr__ = _hook_setattr
 ConnectionHandler.handle_connection = _tracking_handle
 
 
+BODY_TOKEN = os.environ.get("BODY_TOKEN", "")
+
+
 async def _say(request: web.Request) -> web.Response:
+    if BODY_TOKEN and request.headers.get("X-Body-Token") != BODY_TOKEN:
+        return web.json_response({"error": "unauthorized"}, status=401)
     try:
         body = await request.json()
     except Exception:
@@ -104,7 +110,7 @@ async def start_push_api():
     app.router.add_get("/goudan/devices", _devices)
     runner = web.AppRunner(app)
     await runner.setup()
-    site = web.TCPSite(runner, "127.0.0.1", 9101)
+    site = web.TCPSite(runner, "0.0.0.0", 9101)
     await site.start()
 
 

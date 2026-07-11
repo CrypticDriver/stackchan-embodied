@@ -21,6 +21,32 @@ from .poller import HappyPoller
 from .state_machine import RobotEvent, Watcher
 
 PUSH_URL = "http://127.0.0.1:9101/goudan/say"
+AGENT_URL = "http://10.0.1.80:18790/v1/chat/completions"
+AGENT_TOKEN = os.environ.get("OPENCLAW_TOKEN", "")
+USE_AGENT_PHRASING = os.environ.get("AGENT_PHRASING", "1") == "1"
+
+
+def agent_phrase(event: "RobotEvent") -> str | None:
+    """把监工事件交给小狗蛋组织语言 (它有记忆和上下文判断)。失败返回 None 用模板兜底。"""
+    if not (USE_AGENT_PHRASING and AGENT_TOKEN):
+        return None
+    prompt = (
+        f"[监工事件] kind={event.kind} session={event.session_id[:10]} 模板播报=「{event.speak}」\n"
+        "你现在要通过桌面机器人身体开口向大哥播报这件事。用你自己的话说, 一两句, 口语化,"
+        "禁 markdown。直接输出要说的话, 不要任何解释。")
+    req = urllib.request.Request(
+        AGENT_URL,
+        data=json.dumps({"model": "openclaw/xiaogoudan", "user": "happy-watcher",
+                          "messages": [{"role": "user", "content": prompt}]}).encode(),
+        headers={"Content-Type": "application/json", "Authorization": f"Bearer {AGENT_TOKEN}"},
+        method="POST")
+    try:
+        with urllib.request.urlopen(req, timeout=30) as r:
+            text = json.load(r)["choices"][0]["message"]["content"].strip()
+            return text[:120] if text else None
+    except Exception as e:  # noqa: BLE001
+        print("  agent phrasing failed, fallback to template:", e, flush=True)
+        return None
 
 
 def in_quiet_hours(spec: str) -> bool:
@@ -39,10 +65,15 @@ def speak(event: RobotEvent, fake: bool) -> None:
     print(time.strftime("%H:%M:%S"), line, flush=True)
     if fake or not event.speak:
         return
+    phrased = agent_phrase(event)
+    if phrased:
+        event = RobotEvent(event.kind, phrased, event.session_id)
+        print(time.strftime("%H:%M:%S"), f"  agent说法: {phrased}", flush=True)
     req = urllib.request.Request(
         PUSH_URL,
         data=json.dumps({"text": event.speak}).encode(),
-        headers={"Content-Type": "application/json"},
+        headers={"Content-Type": "application/json",
+                 "X-Body-Token": os.environ.get("BODY_TOKEN", "")},
         method="POST",
     )
     try:

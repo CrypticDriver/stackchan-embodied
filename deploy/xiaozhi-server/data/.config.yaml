@@ -60,17 +60,18 @@ LLM:
   # 狗蛋本体: us-west-2 OpenClaw gateway 的 xiaogoudan agent (VPC peering 内网)
   # 有自己的人设/记忆/工具; LiteLLM 保留作视觉+记忆总结+备胎
   StackChanBrain:
+    # 经 brain-router (异步应答总线): 快答直出, 慢活先应一声、干完主动播报
     type: openai
-    base_url: http://10.0.1.80:18790/v1
+    base_url: http://127.0.0.1:4001/v1
     model_name: openclaw/xiaogoudan
-    api_key: __OPENCLAW_TOKEN__
+    api_key: not-needed
     temperature: 0.7
     max_tokens: 300
     timeout:
-      connect: 5.0
-      read: 180.0
-      write: 10.0
-      pool: 5.0
+      connect: 3.0
+      read: 30.0
+      write: 5.0
+      pool: 3.0
   LiteLLMBrain:
     type: openai
     base_url: http://127.0.0.1:4000/v1

@@ -1,0 +1,15 @@
+[Unit]
+Description=brain-router (async brain-body bus: fast answers inline, slow ones announced)
+After=network-online.target
+
+[Service]
+Type=simple
+User=ec2-user
+WorkingDirectory=/home/ec2-user/worklog/stackchan/stackchan-embodied/deploy/brain-router
+EnvironmentFile=/home/ec2-user/worklog/stackchan/.env-openclaw
+ExecStart=/home/ec2-user/worklog/stackchan/xiaozhi-venv/bin/python brain_router.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
