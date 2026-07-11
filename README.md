@@ -35,7 +35,7 @@ StackChan 固件 = 纯身体 (语音链路免刷: 配网门户改 OTA 地址;
 | M5 | 生活流: 早报播报 / 提醒物理化 / IR 遥控家电 | ⬜ |
 
 **大哥下一步: 看 [docs/operator-guide.md](docs/operator-guide.md)。阶段一(免刷零风险)5 分钟切语音大脑; 阶段二(刷机)务必先 esptool 全片备份。**
-临时说明: LLM 当前走本机 LiteLLM→Bedrock Claude(127.0.0.1:4000, 永不公网), OpenClaw gateway 就位后改一行 base_url 即接狗蛋。
+**大脑架构 (2026-07-11 终态)**: 设备 → xiaozhi-server → brain-router(:4001 异步总线) → **OpenClaw xiaogoudan** (us-west-2, Sonnet 5, VPC peering) — 真 agent: 共享狗蛋记忆、干慢活先应声后播报; LiteLLM(:4000) 为辅脑(视觉/记忆总结/错误兜底)。监工 happy-watcher 事件由 agent 亲自措辞播报。
 
 ## 相关仓库
 
