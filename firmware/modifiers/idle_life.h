@@ -21,7 +21,7 @@ namespace stackchan {
 
 class IdleLifeModifier : public Modifier {
 public:
-    IdleLifeModifier()
+    explicit IdleLifeModifier(bool enableBlink = true) : _enable_blink(enableBlink)
     {
         uint32_t now    = GetHAL().millis();
         _next_blink     = now + 1800;
@@ -66,7 +66,7 @@ public:
         }
 
         // ---- 1. 眨眼 ----
-        if (now >= _next_blink) {
+        if (_enable_blink && now >= _next_blink) {
             if (_blink_state == BlinkState::OPEN) {
                 _base_weight_l = avatar.leftEye().getWeight();
                 _base_weight_r = avatar.rightEye().getWeight();
@@ -124,6 +124,7 @@ private:
     uint32_t _next_mouth    = 0;
     uint32_t _suppress_until = 0;
     bool _was_suppressed    = false;
+    bool _enable_blink      = true;
     int _base_weight_l      = 100;
     int _base_weight_r      = 100;
 };
