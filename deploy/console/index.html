@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>🐕 狗蛋控制台 — StackChan Embodied</title>
+<style>
+  :root { --bg:#0f1420; --card:#161d2e; --line:#243049; --text:#e8ecf4; --dim:#94a3b8;
+          --blue:#7dd3fc; --green:#86efac; --amber:#fcd34d; --red:#fca5a5; --purple:#a5b4fc; }
+  * { box-sizing:border-box; }
+  body { background:var(--bg); color:var(--text); font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif; margin:0; padding:18px 14px 60px; line-height:1.6; }
+  .wrap { max-width:900px; margin:auto; }
+  h1 { color:var(--blue); font-size:20px; margin:0 0 2px; display:flex; align-items:center; gap:10px; }
+  h2 { color:var(--purple); font-size:15px; margin:22px 0 10px; }
+  .sub { color:var(--dim); font-size:12px; margin-bottom:16px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px 16px; margin:10px 0; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(240px,1fr)); gap:10px; }
+  .stat { display:flex; align-items:center; gap:10px; }
+  .dot { width:10px; height:10px; border-radius:50%; flex:none; }
+  .on { background:var(--green); box-shadow:0 0 8px var(--green); }
+  .off { background:var(--red); box-shadow:0 0 8px var(--red); }
+  .unk { background:#555; }
+  .k { color:var(--dim); font-size:11.5px; }
+  .v { font-size:13.5px; font-weight:600; }
+  code { background:#0b1020; border:1px solid var(--line); padding:0 5px; border-radius:4px; font-size:11.5px; color:#c4d5f5; }
+  svg text { font-family:inherit; }
+  .legend { display:flex; flex-wrap:wrap; gap:14px; font-size:11.5px; color:var(--dim); margin-top:8px; }
+  .legend span::before { content:"●"; margin-right:5px; }
+  .lg-voice::before { color:var(--green); } .lg-body::before { color:var(--amber); }
+  .lg-cfg::before { color:var(--blue); } .lg-llm::before { color:var(--purple); }
+  .tokenbar { display:flex; gap:8px; margin:8px 0 2px; }
+  .tokenbar input { flex:1; background:#0b1020; border:1px solid var(--line); border-radius:8px; color:var(--text); padding:7px 10px; font-size:13px; }
+  .tokenbar button { background:#1a2338; color:var(--text); border:1px solid var(--line); border-radius:8px; padding:7px 16px; cursor:pointer; }
+  .err { color:var(--red); font-size:12px; }
+  .muted { color:var(--dim); font-size:12px; }
+  table { border-collapse:collapse; width:100%; font-size:12.5px; }
+  td { border:1px solid var(--line); padding:5px 9px; }
+  td:first-child { color:var(--dim); width:130px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>🐕 狗蛋控制台 <span id="clock" style="font-size:12px;color:var(--dim);font-weight:400"></span></h1>
+<div class="sub">StackChan Embodied · 脑在云端(EC2 us-east-2)，桌上是身体 · 本页只读</div>
+
+<div class="card">
+  <div class="tokenbar">
+    <input id="token" type="password" placeholder="Console Token (只需输一次, 存本地)">
+    <button onclick="saveToken()">连接</button>
+  </div>
+  <div id="apierr" class="err"></div>
+</div>
+
+<h2>📊 实时状态</h2>
+<div class="grid">
+  <div class="card"><div class="stat"><div class="dot unk" id="d-device"></div><div><div class="k">StackChan 设备 (44:1b:f6:e3:85:e4)</div><div class="v" id="v-device">—</div></div></div></div>
+  <div class="card"><div class="stat"><div class="dot unk" id="d-xiaozhi"></div><div><div class="k">语音大脑 xiaozhi-server</div><div class="v" id="v-xiaozhi">—</div></div></div></div>
+  <div class="card"><div class="stat"><div class="dot unk" id="d-litellm"></div><div><div class="k">LLM 网关 LiteLLM→Claude</div><div class="v" id="v-litellm">—</div></div></div></div>
+  <div class="card"><div class="stat"><div class="dot unk" id="d-goserver"></div><div><div class="k">身体 relay Go server</div><div class="v" id="v-goserver">—</div></div></div></div>
+</div>
+
+<div class="card">
+  <table>
+    <tr><td>最近听到</td><td id="v-heard">—</td></tr>
+    <tr><td>最近说了</td><td id="v-said">—</td></tr>
+    <tr><td>30 分钟对话数</td><td id="v-chats">—</td></tr>
+    <tr><td>EC2 资源</td><td id="v-host">—</td></tr>
+  </table>
+</div>
+
+<h2>🗺 架构与数据流</h2>
+<div class="card">
+<svg viewBox="0 0 860 520" width="100%">
+  <defs>
+    <marker id="ar-g" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6" fill="none" stroke="#86efac" stroke-width="1.5"/></marker>
+    <marker id="ar-a" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6" fill="none" stroke="#fcd34d" stroke-width="1.5"/></marker>
+    <marker id="ar-b" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6" fill="none" stroke="#7dd3fc" stroke-width="1.5"/></marker>
+    <marker id="ar-p" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6" fill="none" stroke="#a5b4fc" stroke-width="1.5"/></marker>
+  </defs>
+
+  <!-- 家里 -->
+  <rect x="10" y="30" width="200" height="200" rx="12" fill="none" stroke="#243049" stroke-dasharray="4 4"/>
+  <text x="24" y="52" fill="#94a3b8" font-size="12">🏠 家里 (零入站端口)</text>
+  <rect x="34" y="70" width="152" height="130" rx="10" fill="#161d2e" stroke="#243049"/>
+  <text x="110" y="98" fill="#e8ecf4" font-size="13" text-anchor="middle">🤖 StackChan</text>
+  <text x="110" y="118" fill="#94a3b8" font-size="10" text-anchor="middle">CoreS3 · 自编译固件</text>
+  <text x="110" y="136" fill="#94a3b8" font-size="10" text-anchor="middle">果冻眼skin · 狗蛋唤醒词</text>
+  <text x="110" y="154" fill="#94a3b8" font-size="10" text-anchor="middle">麦克风×2 · 摄像头 · 舵机×2</text>
+  <text x="110" y="172" fill="#86efac" font-size="10" text-anchor="middle">全部连接为 outbound ⇡</text>
+
+  <!-- 边缘 -->
+  <rect x="300" y="60" width="180" height="150" rx="12" fill="#161d2e" stroke="#243049"/>
+  <text x="390" y="88" fill="#e8ecf4" font-size="13" text-anchor="middle">☁️ CloudFront</text>
+  <text x="390" y="106" fill="#94a3b8" font-size="10" text-anchor="middle">da8daz4hvc7q8.cloudfront.net</text>
+  <text x="390" y="124" fill="#94a3b8" font-size="10" text-anchor="middle">TLS/wss 终结 · 注入</text>
+  <text x="390" y="140" fill="#94a3b8" font-size="10" text-anchor="middle">X-Origin-Verify 头</text>
+  <text x="390" y="168" fill="#e8ecf4" font-size="12" text-anchor="middle">→ ALB (无头 403)</text>
+  <text x="390" y="186" fill="#94a3b8" font-size="10" text-anchor="middle">stackchan-alb · 路径路由</text>
+
+  <!-- EC2 -->
+  <rect x="560" y="20" width="290" height="480" rx="12" fill="none" stroke="#243049" stroke-dasharray="4 4"/>
+  <text x="575" y="42" fill="#94a3b8" font-size="12">🖥 EC2 (SG 只放 ALB)</text>
+
+  <rect x="580" y="58" width="250" height="86" rx="10" fill="#161d2e" stroke="#86efac"/>
+  <text x="705" y="80" fill="#86efac" font-size="12" text-anchor="middle">🧠 xiaozhi-server :8000/:8003</text>
+  <text x="705" y="98" fill="#94a3b8" font-size="10" text-anchor="middle">VAD(Silero) → 耳(FunASR 本地)</text>
+  <text x="705" y="114" fill="#94a3b8" font-size="10" text-anchor="middle">→ 想(LLM) → 声(EdgeTTS 云希)</text>
+  <text x="705" y="130" fill="#94a3b8" font-size="10" text-anchor="middle">OTA 接口 · 视觉接口 · MCP 桥</text>
+
+  <rect x="580" y="158" width="250" height="64" rx="10" fill="#161d2e" stroke="#a5b4fc"/>
+  <text x="705" y="180" fill="#a5b4fc" font-size="12" text-anchor="middle">🔮 LiteLLM 127.0.0.1:4000</text>
+  <text x="705" y="198" fill="#94a3b8" font-size="10" text-anchor="middle">对话+看图 → Bedrock Claude</text>
+  <text x="705" y="212" fill="#94a3b8" font-size="10" text-anchor="middle">(永不公网 · 未来换 OpenClaw)</text>
+
+  <rect x="580" y="236" width="250" height="64" rx="10" fill="#161d2e" stroke="#fcd34d"/>
+  <text x="705" y="258" fill="#fcd34d" font-size="12" text-anchor="middle">🦾 Go relay :12800</text>
+  <text x="705" y="276" fill="#94a3b8" font-size="10" text-anchor="middle">0x03 表情/0x04 动作/JPEG 帧路由</text>
+  <text x="705" y="290" fill="#94a3b8" font-size="10" text-anchor="middle">RSA 鉴权 · 桌宠模式用</text>
+
+  <rect x="580" y="314" width="250" height="58" rx="10" fill="#161d2e" stroke="#243049"/>
+  <text x="705" y="336" fill="#e8ecf4" font-size="12" text-anchor="middle">📊 控制台 API :9100</text>
+  <text x="705" y="354" fill="#94a3b8" font-size="10" text-anchor="middle">本页数据来源 (只读+token)</text>
+
+  <rect x="580" y="386" width="250" height="96" rx="10" fill="#161d2e" stroke="#243049"/>
+  <text x="705" y="408" fill="#e8ecf4" font-size="12" text-anchor="middle">🛠 body-client / happy-watcher</text>
+  <text x="705" y="426" fill="#94a3b8" font-size="10" text-anchor="middle">Python 库: 表情预设/帧协议</text>
+  <text x="705" y="442" fill="#94a3b8" font-size="10" text-anchor="middle">M2 监工状态机(待接 Happy API)</text>
+  <text x="705" y="458" fill="#94a3b8" font-size="10" text-anchor="middle">M3 人脸追踪(未开始)</text>
+
+  <!-- 数据流 -->
+  <!-- 语音 -->
+  <path d="M 186 110 C 250 100, 260 100, 298 100" fill="none" stroke="#86efac" stroke-width="2" marker-end="url(#ar-g)"/>
+  <text x="242" y="92" fill="#86efac" font-size="10" text-anchor="middle">① 语音 wss</text>
+  <path d="M 482 100 C 530 100, 540 100, 578 100" fill="none" stroke="#86efac" stroke-width="2" marker-end="url(#ar-g)"/>
+  <!-- 配置 -->
+  <path d="M 186 140 C 250 150, 270 160, 300 168" fill="none" stroke="#7dd3fc" stroke-width="1.6" marker-end="url(#ar-b)"/>
+  <text x="240" y="166" fill="#7dd3fc" font-size="10" text-anchor="middle">② OTA/https</text>
+  <!-- 身体 -->
+  <path d="M 186 172 C 280 240, 420 268, 578 268" fill="none" stroke="#fcd34d" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#ar-a)"/>
+  <text x="380" y="248" fill="#fcd34d" font-size="10" text-anchor="middle">③ 身体 wss (桌宠模式, 虚线=按需)</text>
+  <!-- LLM 内部 -->
+  <path d="M 705 146 L 705 156" fill="none" stroke="#a5b4fc" stroke-width="2" marker-end="url(#ar-p)"/>
+  <text x="760" y="154" fill="#a5b4fc" font-size="10">同机 loopback</text>
+</svg>
+<div class="legend">
+  <span class="lg-voice">① 语音全链路: 唤醒→Opus 上行→FunASR→LLM→TTS 下行 (设备⇄xiaozhi-server, 常连)</span>
+  <span class="lg-cfg">② 配置: 开机 OTA 拉 WS 地址/版本</span>
+  <span class="lg-body">③ 身体 0x03/0x04: relay 帧路由 (AI 模式下身体控制实际走 ①内的 MCP 工具)</span>
+  <span class="lg-llm">④ 想: LiteLLM→Bedrock Claude, 仅 loopback</span>
+</div>
+</div>
+
+<h2>🔁 一次对话的完整旅程</h2>
+<div class="card muted" style="font-size:12.5px">
+"嘿狗蛋" <b>(MultiNet 本地识别)</b> → 设备录音 Opus 帧 ⇡wss→ CloudFront → ALB → xiaozhi-server
+→ SileroVAD 断句 → FunASR 转文字 → <b>LLM(Claude)</b> 思考(带狗蛋人设/可调 MCP 工具: 转头/拍照/LED/提醒)
+→ 回复切句 → EdgeTTS 合成(云希) → Opus 帧 ⇣wss→ 设备播放 + 表情/嘴型同步。
+拍照时: 设备 JPEG ⇡https→ 视觉接口 → Claude 看图 → 文字回到对话流。
+</div>
+
+<div class="card muted" style="font-size:12px">
+📚 相关页面: <a style="color:var(--blue)" href="https://crypticdriver.github.io/stackchan-embodied/face-simulator.html">表情模拟器</a> ·
+<a style="color:var(--blue)" href="https://crypticdriver.github.io/stackchan-embodied/skin-gallery.html">画风画廊</a> ·
+<a style="color:var(--blue)" href="https://crypticdriver.github.io/stackchan-embodied/flash-guide.html">刷机指南</a> ·
+<a style="color:var(--blue)" href="https://crypticdriver.github.io/stackchan-embodied/ROADMAP.html">路线图</a> ·
+<a style="color:var(--blue)" href="https://github.com/CrypticDriver/stackchan-embodied">GitHub</a>
+</div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+function saveToken(){ localStorage.setItem('console_token', $('token').value.trim()); refresh(); }
+function setDot(id, ok){ const d=$('d-'+id); d.className='dot '+(ok===null?'unk':ok?'on':'off'); }
+
+async function refresh(){
+  const tok = localStorage.getItem('console_token') || '';
+  if (!tok) { $('apierr').textContent = '输入 token 后开始拉取实时状态'; return; }
+  $('token').value = tok;
+  try {
+    const r = await fetch('/console/api/status', { headers: { 'X-Console-Token': tok } });
+    if (r.status === 401) { $('apierr').textContent = 'token 不对'; return; }
+    const d = await r.json();
+    $('apierr').textContent = '';
+    for (const k of ['xiaozhi','litellm','goserver']) {
+      setDot(k, d.services[k].active);
+      $('v-'+k).textContent = d.services[k].active ? '运行中' : '已停止';
+    }
+    const dev = d.device;
+    setDot('device', dev.voice_ws_connected_recently);
+    $('v-device').textContent = dev.voice_ws_connected_recently ? '在线 (30min 内有语音连接)' : '近 30min 无连接';
+    $('v-heard').textContent = dev.last_heard || '—';
+    $('v-said').textContent = dev.last_said || '—';
+    $('v-chats').textContent = dev.chats_30min;
+    $('v-host').textContent = `内存 ${d.host.mem_used_mb}/${d.host.mem_total_mb}MB · 磁盘 ${d.host.disk_used_pct} · load ${d.host.load.join(' ')}`;
+  } catch(e) { $('apierr').textContent = '状态 API 不可达: ' + e.message; }
+}
+setInterval(refresh, 15000);
+setInterval(()=>{ $('clock').textContent = new Date().toLocaleString('zh-CN'); }, 1000);
+refresh();
+</script>
+</body>
+</html>

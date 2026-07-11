@@ -1,0 +1,15 @@
+[Unit]
+Description=StackChan console (dashboard + status API, loopback only)
+After=network-online.target
+
+[Service]
+Type=simple
+User=ec2-user
+WorkingDirectory=/home/ec2-user/worklog/stackchan/stackchan-embodied/deploy/console
+EnvironmentFile=/home/ec2-user/worklog/stackchan/.env-console
+ExecStart=/home/ec2-user/worklog/stackchan/xiaozhi-venv/bin/python console_server.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
