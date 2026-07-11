@@ -55,3 +55,37 @@
 
 - 宿主鉴权回环: `/tmp/secret-logic-host/`（harness.cpp + ws_connect_test.py，本文档同目录归档见 `firmware/host-verify/`）
 - QEMU: `idf_tools.py install qemu-xtensa` + 手动补 libslirp/SDL2（AL2023 无包，源码编）
+
+---
+
+## 第 4 层（追加 2026-07-11）：表情/动作语义闭环 ✅ — 并抓到一个真 bug
+
+**方法**：固件的 `json_helper.cpp`（sha256 与固件源完全一致，一字未改）在宿主编译，
+Avatar/Servo/NeonLight 换成记录调用的 spy 桩。然后跑**全真链路**:
+
+```
+BodyClient(真) → Go relay :12800(真, RSA 鉴权) → 设备侧帧接收(固件 token) → 固件 json 解析器(真) → spy
+```
+
+链路上唯一非真实的环节是"物理执行"（舵机 PWM/屏幕像素）。
+
+**11 项语义测试全过**，覆盖:
+- 表情: mouth.size / 眼睛位移+旋转+粗细 复合指令 → 逐一调用对应 setter
+- 动作: speed 模式(moveWithSpeed)、默认弹簧(move)、自定义弹簧参数(spring)、
+  360° rotate 模式、以及固件规则"rotate 优先于 angle"
+- 防御: 坏 JSON / 错误类型(字符串角度) / 无关键名 → **零动作**（不会乱动）
+- RGB 灯: 颜色+呼吸时长解析正确
+
+**抓到的真 bug**: 固件 `update_feature()` 要求 `x` 和 `y` **同时**为 int 才调 setPosition —
+body-client 只发 `{"leftEye":{"y":-3}}` 时会被固件静默忽略。已修：编码器自动补全缺失轴为 0，
+加了 2 个回归测试（body-client 现 18/18）。**这正是模拟验证的价值——真机上这会表现为
+"表情指令偶尔没反应"的玄学问题。**
+
+**关于屏幕表情的说明**: WS 0x03 通道控制的是官方固件的"五官参数体系"
+（位置/旋转/粗细/大小——眨眼、看向某处、张嘴闭嘴都由此组合），不是切换 happy/sad 表情包。
+出厂固件的成套情绪表情走小智语音链路的 emotion 事件（M1-B 的 LLM 回复里已带 emotion 字段）。
+两条路都已在咱手里: 语音说话自带表情, 0x03 做精细五官控制（M2 的"thinking 表情"将用组合参数实现）。
+
+**身体的"反应"(传感器回传)**: 设备→云的上行通道 (JPEG 0x02 / Opus 0x01 / 文本 0x07 /
+上下线 0x16,0x17) 已在 16 项集成测试覆盖（摄像头开→JPEG 回传→关 全周期）。
+IMU/触摸事件在官方 WS 协议里无上行帧型——M3 若需要, 走固件侧 MCP 或自定义帧扩展（咱自己编译固件, 可加）。

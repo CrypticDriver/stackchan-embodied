@@ -69,3 +69,16 @@ def test_text_json_unicode():
     frame = p.decode(raw)
     body = json.loads(frame.payload[12:])
     assert body == {"name": "狗蛋", "content": "大哥回来啦"}
+
+
+def test_avatar_xy_autofill_firmware_quirk():
+    # 固件 update_feature 要求 x/y 同时存在才 setPosition(实测发现) — 编码器需自动补全
+    raw = p.encode_avatar("aabbccddeeff", {"leftEye": {"y": -3}})
+    frame = p.decode(raw)
+    assert json.loads(frame.payload[12:]) == {"leftEye": {"y": -3, "x": 0}}
+
+
+def test_avatar_no_autofill_when_position_absent():
+    raw = p.encode_avatar("aabbccddeeff", {"mouth": {"size": 50}})
+    frame = p.decode(raw)
+    assert json.loads(frame.payload[12:]) == {"mouth": {"size": 50}}

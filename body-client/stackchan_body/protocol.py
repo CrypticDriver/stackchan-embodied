@@ -84,7 +84,15 @@ def encode_targeted(msg_type: MsgType | int, mac: str, data: bytes = b"") -> byt
 
 def encode_avatar(mac: str, avatar: dict) -> bytes:
     """表情控制 (0x03)。JSON 结构见固件 json_helper.cpp:
-    {"leftEye"/"rightEye"/"mouth": {"x","y","rotation","weight","size"}}"""
+    {"leftEye"/"rightEye"/"mouth": {"x","y","rotation","weight","size"}}
+
+    固件坑(已实测): update_feature 要求 x 和 y **同时**为 int 才调 setPosition,
+    只给一个会被静默忽略 → 这里自动补全缺失的另一轴为 0。"""
+    for feature in ("leftEye", "rightEye", "mouth"):
+        obj = avatar.get(feature)
+        if isinstance(obj, dict) and (("x" in obj) != ("y" in obj)):
+            obj.setdefault("x", 0)
+            obj.setdefault("y", 0)
     return encode_targeted(MsgType.CONTROL_AVATAR, mac, json.dumps(avatar).encode())
 
 
