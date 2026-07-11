@@ -21,6 +21,7 @@ SERVICES = {
     "litellm": "stackchan-litellm",
     "xiaozhi": "stackchan-xiaozhi",
     "goserver": "stackchan-goserver",
+    "watcher": "stackchan-watcher",
 }
 
 
@@ -71,6 +72,41 @@ def device_activity() -> dict:
     }
 
 
+def watcher_status() -> dict:
+    """监工面板: 最近播报事件 + 被监控 session 概览。"""
+    logs = _run(["journalctl", "-u", "stackchan-watcher", "--since", "-2hour",
+                 "-o", "cat", "--no-pager"], timeout=8)
+    events = []
+    for line in logs.split("\n"):
+        # 形如: 08:51:40 [attention] 老大，xx在等你审批 <- session cmr...
+        m = re.match(r"(\d{2}:\d{2}:\d{2}) \[(\w+)\] (.+?) <- session (\w+)", line)
+        if m:
+            events.append({"t": m.group(1), "kind": m.group(2),
+                           "speak": m.group(3), "session": m.group(4)})
+    spoken = [e for e in events if e["speak"] != "(表情)"]
+    return {"recent_events": events[-30:], "recent_spoken": spoken[-8:],
+            "events_2h": len(events), "spoken_2h": len(spoken)}
+
+
+def sessions_overview() -> dict:
+    """被监控 CC session 概览 (直接调 happy poller)。"""
+    try:
+        import sys
+        sys.path.insert(0, "/home/ec2-user/worklog/stackchan/stackchan-embodied/happy-watcher")
+        from happy_watcher.poller import HappyPoller
+        poller = HappyPoller(os.environ.get("HAPPY_SERVER_URL",
+                                            "https://d2nkikyt4i91kk.cloudfront.net"))
+        snaps = poller.fetch()
+        by_state: dict = {}
+        for s in snaps:
+            by_state.setdefault(s.state.value, []).append(
+                {"title": s.title, "id": s.session_id[:10], "detail": s.detail})
+        return {"total": len(snaps),
+                "by_state": {k: {"count": len(v), "items": v[:10]} for k, v in by_state.items()}}
+    except Exception as e:  # noqa: BLE001
+        return {"error": str(e)}
+
+
 def host_status() -> dict:
     mem = _run(["free", "-m"]).split("\n")
     mem_line = mem[1].split() if len(mem) > 1 else ["", "0", "0"]
@@ -92,6 +128,8 @@ async def status(request: web.Request) -> web.Response:
         "ts": datetime.now(timezone.utc).isoformat(),
         "services": service_status(),
         "device": device_activity(),
+        "watcher": watcher_status(),
+        "cc_sessions": sessions_overview(),
         "host": host_status(),
     }, headers={"Cache-Control": "no-store"})
 

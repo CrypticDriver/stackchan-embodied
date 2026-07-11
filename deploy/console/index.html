@@ -57,6 +57,7 @@
   <div class="card"><div class="stat"><div class="dot unk" id="d-xiaozhi"></div><div><div class="k">语音大脑 xiaozhi-server</div><div class="v" id="v-xiaozhi">—</div></div></div></div>
   <div class="card"><div class="stat"><div class="dot unk" id="d-litellm"></div><div><div class="k">LLM 网关 LiteLLM→Claude</div><div class="v" id="v-litellm">—</div></div></div></div>
   <div class="card"><div class="stat"><div class="dot unk" id="d-goserver"></div><div><div class="k">身体 relay Go server</div><div class="v" id="v-goserver">—</div></div></div></div>
+  <div class="card"><div class="stat"><div class="dot unk" id="d-watcher"></div><div><div class="k">监工 happy-watcher (M2)</div><div class="v" id="v-watcher">—</div></div></div></div>
 </div>
 
 <div class="card">
@@ -66,6 +67,20 @@
     <tr><td>30 分钟对话数</td><td id="v-chats">—</td></tr>
     <tr><td>EC2 资源</td><td id="v-host">—</td></tr>
   </table>
+</div>
+
+<h2>👁 M2 监工面板</h2>
+<div class="grid">
+  <div class="card"><div class="k">被监控 CC sessions</div><div class="v" id="w-total">—</div><div class="muted" id="w-bystate">—</div></div>
+  <div class="card"><div class="k">2 小时内 事件 / 播报</div><div class="v" id="w-counts">—</div><div class="muted">同状态只报一次 · ≥3 件合并</div></div>
+</div>
+<div class="card">
+  <div class="k" style="margin-bottom:6px">🔔 等待审批 / 提问中</div>
+  <div id="w-waiting" class="muted">—</div>
+</div>
+<div class="card">
+  <div class="k" style="margin-bottom:6px">📣 最近播报</div>
+  <table id="w-spoken"><tr><td class="muted">—</td></tr></table>
 </div>
 
 <h2>🗺 架构与数据流</h2>
@@ -122,10 +137,10 @@
   <text x="705" y="354" fill="#94a3b8" font-size="10" text-anchor="middle">本页数据来源 (只读+token)</text>
 
   <rect x="580" y="386" width="250" height="96" rx="10" fill="#161d2e" stroke="#243049"/>
-  <text x="705" y="408" fill="#e8ecf4" font-size="12" text-anchor="middle">🛠 body-client / happy-watcher</text>
-  <text x="705" y="426" fill="#94a3b8" font-size="10" text-anchor="middle">Python 库: 表情预设/帧协议</text>
-  <text x="705" y="442" fill="#94a3b8" font-size="10" text-anchor="middle">M2 监工状态机(待接 Happy API)</text>
-  <text x="705" y="458" fill="#94a3b8" font-size="10" text-anchor="middle">M3 人脸追踪(未开始)</text>
+  <text x="705" y="408" fill="#e8ecf4" font-size="12" text-anchor="middle">👁 happy-watcher (M2 ✅)</text>
+  <text x="705" y="426" fill="#94a3b8" font-size="10" text-anchor="middle">Happy API 轮询→解密→状态机</text>
+  <text x="705" y="442" fill="#94a3b8" font-size="10" text-anchor="middle">→ :9101 /goudan/say 主动播报</text>
+  <text x="705" y="458" fill="#94a3b8" font-size="10" text-anchor="middle">body-client 库 · M3 未开始</text>
 
   <!-- 数据流 -->
   <!-- 语音 -->
@@ -147,6 +162,7 @@
   <span class="lg-cfg">② 配置: 开机 OTA 拉 WS 地址/版本</span>
   <span class="lg-body">③ 身体 0x03/0x04: relay 帧路由 (AI 模式下身体控制实际走 ①内的 MCP 工具)</span>
   <span class="lg-llm">④ 想: LiteLLM→Bedrock Claude, 仅 loopback</span>
+  <span class="lg-llm">⑤ 监工: watcher→Happy API(轮询)→push→① 语音链路开口喊人 (全内网)</span>
 </div>
 </div>
 
@@ -181,7 +197,7 @@ async function refresh(){
     if (r.status === 401) { $('apierr').textContent = 'token 不对'; return; }
     const d = await r.json();
     $('apierr').textContent = '';
-    for (const k of ['xiaozhi','litellm','goserver']) {
+    for (const k of ['xiaozhi','litellm','goserver','watcher']) {
       setDot(k, d.services[k].active);
       $('v-'+k).textContent = d.services[k].active ? '运行中' : '已停止';
     }
@@ -192,6 +208,21 @@ async function refresh(){
     $('v-said').textContent = dev.last_said || '—';
     $('v-chats').textContent = dev.chats_30min;
     $('v-host').textContent = `内存 ${d.host.mem_used_mb}/${d.host.mem_total_mb}MB · 磁盘 ${d.host.disk_used_pct} · load ${d.host.load.join(' ')}`;
+    // M2 面板
+    const cc = d.cc_sessions || {};
+    if (!cc.error) {
+      $('w-total').textContent = cc.total ?? '—';
+      const bs = cc.by_state || {};
+      $('w-bystate').textContent = Object.entries(bs).map(([k,v])=>`${k}:${v.count}`).join(' · ') || '无';
+      const waiting = (bs.waiting_input?.items) || [];
+      $('w-waiting').innerHTML = waiting.length
+        ? waiting.map(s=>`<b>${s.title}</b> <span class="muted">(${s.detail||'待输入'} · ${s.id})</span>`).join('<br>')
+        : '没有活儿在等你 ✨';
+    }
+    const w = d.watcher || {};
+    $('w-counts').textContent = `${w.events_2h ?? 0} / ${w.spoken_2h ?? 0}`;
+    const rows = (w.recent_spoken||[]).slice().reverse().map(e=>`<tr><td style="width:70px">${e.t}</td><td>${e.speak}</td></tr>`);
+    $('w-spoken').innerHTML = rows.length ? rows.join('') : '<tr><td class="muted">最近 2 小时没有播报</td></tr>';
   } catch(e) { $('apierr').textContent = '状态 API 不可达: ' + e.message; }
 }
 setInterval(refresh, 15000);
