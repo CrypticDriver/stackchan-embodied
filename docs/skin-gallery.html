@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>StackChan 画风设计稿 — 选皮肤</title>
+<style>
+  :root { --bg:#0f1420; --card:#161d2e; --line:#243049; --text:#e8ecf4; --dim:#94a3b8; --blue:#7dd3fc; --green:#86efac; }
+  * { box-sizing:border-box; }
+  body { background:var(--bg); color:var(--text); font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif; margin:0; padding:20px 12px 60px; }
+  .wrap { max-width:760px; margin:auto; }
+  h1 { color:var(--blue); font-size:20px; margin:0 0 4px; }
+  .sub { color:var(--dim); font-size:12.5px; margin-bottom:20px; line-height:1.6; }
+  .style-card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px; margin-bottom:18px; }
+  .style-head { display:flex; align-items:baseline; gap:10px; margin-bottom:4px; }
+  .style-name { font-size:16px; font-weight:700; color:var(--text); }
+  .style-tag { font-size:11px; color:var(--bg); background:var(--blue); border-radius:8px; padding:1px 8px; font-weight:600; }
+  .style-desc { color:var(--dim); font-size:12.5px; margin-bottom:10px; line-height:1.55; }
+  .tiles { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+  .tile { position:relative; }
+  .tile img { width:100%; border-radius:8px; display:block; border:1px solid var(--line); }
+  .tile span { position:absolute; left:6px; bottom:6px; font-size:10.5px; color:#cbd5e1; background:rgba(0,0,0,.55); border-radius:6px; padding:1px 6px; }
+  .note { background:var(--card); border:1px solid var(--line); border-left:3px solid var(--green); border-radius:10px; padding:12px 14px; font-size:12.5px; color:var(--dim); line-height:1.7; }
+  .note b { color:var(--green); }
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>🎨 StackChan 画风设计稿</h1>
+<div class="sub">
+  8 款画风 × 3 情绪 (neutral / happy / surprised)。选定后我会在固件里新写一个 skin（LVGL 渲染层），
+  0x03 协议、body-client、表情预设全部不变——只换「怎么画」，不换「参数语义」。可以混搭（如 B 的眼 + E 的嘴）。
+</div>
+
+<div class="style-card">
+  <div class="style-head"><span class="style-name">E · 猫咪风</span><span class="style-tag">竖瞳 + ω嘴</span></div>
+  <div class="style-desc">竖橢圆瞳孔一秒变猫，ω 形猫嘴，惊讶时瞳孔缩成细线——最"宠物"的一款。</div>
+  <div class="tiles">
+    <div class="tile"><img src="gallery/kanji-neutral.png"><span>neutral</span></div>
+    <div class="tile"><img src="gallery/kanji-happy.png"><span>happy</span></div>
+    <div class="tile"><img src="gallery/kanji-surprised.png"><span>surprised</span></div>
+  </div>
+</div>
+
+<div class="style-card">
+  <div class="style-head"><span class="style-name">F · 赛博故障风</span><span class="style-tag">双色错位描边</span></div>
+  <div class="style-desc">粉红主体 + 青色错位残影，赛博朋克 glitch 感。配合 RGB 灯同步双色呼吸会非常酷。</div>
+  <div class="tiles">
+    <div class="tile"><img src="gallery/glitch-neutral.png"><span>neutral</span></div>
+    <div class="tile"><img src="gallery/glitch-happy.png"><span>happy</span></div>
+    <div class="tile"><img src="gallery/glitch-surprised.png"><span>surprised</span></div>
+  </div>
+</div>
+
+<div class="style-card">
+  <div class="style-head"><span class="style-name">G · 月光幽灵风</span><span class="style-tag">柔光渐变</span></div>
+  <div class="style-desc">淡紫柔光大眼，边缘有光晕渐变，安静空灵。夜里放桌上像一只小幽灵，治愈系首选。</div>
+  <div class="tiles">
+    <div class="tile"><img src="gallery/moon-neutral.png"><span>neutral</span></div>
+    <div class="tile"><img src="gallery/moon-happy.png"><span>happy</span></div>
+    <div class="tile"><img src="gallery/moon-surprised.png"><span>surprised</span></div>
+  </div>
+</div>
+
+<div class="style-card">
+  <div class="style-head"><span class="style-name">H · 终端字符风</span><span class="style-tag">极客 &gt;_&lt;</span></div>
+  <div class="style-desc">等宽字体字符脸 + 右下角终端光标，程序员の魂。给大哥这种天天盯 CC 干活的人量身定做。</div>
+  <div class="tiles">
+    <div class="tile"><img src="gallery/bracket-neutral.png"><span>neutral</span></div>
+    <div class="tile"><img src="gallery/bracket-happy.png"><span>happy</span></div>
+    <div class="tile"><img src="gallery/bracket-surprised.png"><span>surprised</span></div>
+  </div>
+</div>
+
+<div class="style-card">
+  <div class="style-head"><span class="style-name">A · Cozmo 方眼</span><span class="style-tag">EMO / Vector 风</span></div>
+  <div class="style-desc">大圆角方块眼、无嘴，全部情绪靠眼形（压扁/斜切/大小眼）。最科幻、辨识度最高的机器人脸。</div>
+  <div class="tiles">
+    <div class="tile"><img src="gallery/cozmo-neutral.png"><span>neutral</span></div>
+    <div class="tile"><img src="gallery/cozmo-happy.png"><span>happy</span></div>
+    <div class="tile"><img src="gallery/cozmo-surprised.png"><span>surprised</span></div>
+  </div>
+</div>
+
+<div class="style-card">
+  <div class="style-head"><span class="style-name">B · 果冻高光眼</span><span class="style-tag">宠物机器人</span></div>
+  <div class="style-desc">大圆眼带高光缺口（湿润眼球的反光感）+ 弧线嘴。比官方白点生动一个次元，最有"生命感"。</div>
+  <div class="tiles">
+    <div class="tile"><img src="gallery/jelly-neutral.png"><span>neutral</span></div>
+    <div class="tile"><img src="gallery/jelly-happy.png"><span>happy</span></div>
+    <div class="tile"><img src="gallery/jelly-surprised.png"><span>surprised</span></div>
+  </div>
+</div>
+
+<div class="style-card">
+  <div class="style-head"><span class="style-name">C · 线条颜文字风</span><span class="style-tag">(｡◕‿◕｡)</span></div>
+  <div class="style-desc">全线条勾勒，LINE 贴图/颜文字质感，轻盈治愈，屏幕功耗也最低。</div>
+  <div class="tiles">
+    <div class="tile"><img src="gallery/line-neutral.png"><span>neutral</span></div>
+    <div class="tile"><img src="gallery/line-happy.png"><span>happy</span></div>
+    <div class="tile"><img src="gallery/line-surprised.png"><span>surprised</span></div>
+  </div>
+</div>
+
+<div class="style-card">
+  <div class="style-head"><span class="style-name">D · 像素 8bit 风</span><span class="style-tag">Game Boy</span></div>
+  <div class="style-desc">复古像素脸，绿磷光配色，8-bit 游戏机的味道。可以加扫描线特效加强 CRT 感。</div>
+  <div class="tiles">
+    <div class="tile"><img src="gallery/pixel-neutral.png"><span>neutral</span></div>
+    <div class="tile"><img src="gallery/pixel-happy.png"><span>happy</span></div>
+    <div class="tile"><img src="gallery/pixel-surprised.png"><span>surprised</span></div>
+  </div>
+</div>
+
+<div class="note">
+  <b>怎么选：</b>直接说字母（可多选混搭，如"B 的眼 + E 的嘴"、"D 但要青色"）。
+  选定后的实现：固件新增 <code>skins/goudan/</code>（LVGL 渲染 + 六情绪 setEmotion 映射），
+  身体控制协议与表情预设库不动；编译后过四层验证，与主固件一起等你刷机。
+  颜色都可换，动画（眨眼频率/瞳孔漂移/呼吸）属于 skin 层，选定画风后一并设计。
+</div>
+</div>
+</body>
+</html>
