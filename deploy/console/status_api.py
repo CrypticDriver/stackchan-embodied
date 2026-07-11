@@ -17,14 +17,14 @@ from aiohttp import web
 TOKEN = os.environ["CONSOLE_TOKEN"]
 DEVICE_MAC = "44:1b:f6:e3:85:e4"
 
+# 语音栈已搬 us-west-2 (与大脑同机); 本机(us-east)只留 watcher(守 Happy 凭据) + console
 SERVICES = {
-    "litellm": "stackchan-litellm",
-    "xiaozhi": "stackchan-xiaozhi",
-    "goserver": "stackchan-goserver",
     "watcher": "stackchan-watcher",
-    "brainrouter": "stackchan-brainrouter",
     "console": "stackchan-console",
+    "goserver": "stackchan-goserver",
 }
+# us-west 服务经 ALB 探活
+USWEST_ALB = "stackchan-uswest-alb-1468823621.us-west-2.elb.amazonaws.com"
 
 
 def _run(cmd: list[str], timeout: int = 5) -> str:
@@ -118,6 +118,17 @@ def brainrouter_status() -> dict:
         return {"ok": False, "background_jobs": 0}
 
 
+def uswest_voice_status() -> dict:
+    """us-west 语音栈: 经 ALB 探 OTA/console health (带 origin-verify)。"""
+    import subprocess
+    ov = open("/home/ec2-user/worklog/stackchan/.secrets-origin-verify").read().strip()
+    code = _run(["curl","-s","-m","5","-o","/dev/null","-w","%{http_code}",
+                 "-X","POST",f"http://{USWEST_ALB}/xiaozhi/ota/",
+                 "-H",f"X-Origin-Verify: {ov}","-H","Device-Id: probe","-H","Client-Id: probe",
+                 "-H","Content-Type: application/json","-d","{}"], timeout=8)
+    return {"voice_ota_ok": code == "200", "http": code, "region": "us-west-2 (与大脑同机)"}
+
+
 def openclaw_status() -> dict:
     """小狗蛋本体 (us-west-2 OpenClaw gateway, VPC peering) 健康检查。"""
     out = _run(["curl", "-s", "-m", "4", "-o", "/dev/null", "-w", "%{http_code}",
@@ -149,6 +160,7 @@ async def status(request: web.Request) -> web.Response:
         "device": device_activity(),
         "watcher": watcher_status(),
         "openclaw": openclaw_status(),
+        "uswest_voice": uswest_voice_status(),
         "brainrouter": brainrouter_status(),
         "cc_sessions": sessions_overview(),
         "host": host_status(),

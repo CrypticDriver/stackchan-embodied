@@ -20,8 +20,8 @@ import urllib.request
 from .poller import HappyPoller
 from .state_machine import RobotEvent, Watcher
 
-PUSH_URL = "http://127.0.0.1:9101/goudan/say"
-AGENT_URL = "http://10.0.1.80:18790/v1/chat/completions"
+PUSH_URL = os.environ.get("PUSH_URL", "http://127.0.0.1:9101/goudan/say")
+AGENT_URL = os.environ.get("AGENT_URL", "http://10.0.1.80:18790/v1/chat/completions")
 AGENT_TOKEN = os.environ.get("OPENCLAW_TOKEN", "")
 USE_AGENT_PHRASING = os.environ.get("AGENT_PHRASING", "1") == "1"
 
