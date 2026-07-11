@@ -33,7 +33,7 @@
 
 <div class="row">
   <div class="card">
-    <canvas id="cv" width="320" height="240" style="width:480px;height:360px;image-rendering:pixelated;"></canvas>
+    <canvas id="cv" width="320" height="240" style="width:min(480px, 100%);aspect-ratio:4/3;height:auto;image-rendering:pixelated;"></canvas>
     <div class="presets">
       <button onclick="preset('neutral')">😐 Neutral</button>
       <button onclick="preset('happy')">😊 Happy</button>
