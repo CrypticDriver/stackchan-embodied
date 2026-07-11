@@ -43,7 +43,7 @@ Intent:
 Memory:
   mem_local_short:
     type: mem_local_short
-    llm: StackChanBrain   # 记忆总结也走 LiteLLM (默认 ChatGLMLLM 是中文占位 key, 会 ascii 崩)
+    llm: LiteLLMBrain   # 记忆总结走本地 LiteLLM (快, 不打扰 agent)
 
 VLLM:
   StackChanVision:
@@ -53,7 +53,16 @@ VLLM:
     api_key: __LITELLM_KEY__
 
 LLM:
+  # 狗蛋本体: us-west-2 OpenClaw gateway 的 xiaogoudan agent (VPC peering 内网)
+  # 有自己的人设/记忆/工具; LiteLLM 保留作视觉+记忆总结+备胎
   StackChanBrain:
+    type: openai
+    base_url: http://10.0.1.80:18790/v1
+    model_name: openclaw/xiaogoudan
+    api_key: __OPENCLAW_TOKEN__
+    temperature: 0.7
+    max_tokens: 300
+  LiteLLMBrain:
     type: openai
     base_url: http://127.0.0.1:4000/v1
     model_name: stackchan-brain
