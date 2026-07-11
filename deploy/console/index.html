@@ -59,6 +59,7 @@
   <div class="card"><div class="stat"><div class="dot unk" id="d-litellm"></div><div><div class="k">辅脑 LiteLLM (视觉/记忆/备胎)</div><div class="v" id="v-litellm">—</div></div></div></div>
   <div class="card"><div class="stat"><div class="dot unk" id="d-goserver"></div><div><div class="k">身体 relay Go server</div><div class="v" id="v-goserver">—</div></div></div></div>
   <div class="card"><div class="stat"><div class="dot unk" id="d-watcher"></div><div><div class="k">监工 happy-watcher (M2)</div><div class="v" id="v-watcher">—</div></div></div></div>
+  <div class="card"><div class="stat"><div class="dot unk" id="d-brainrouter"></div><div><div class="k">脑体总线 brain-router (异步应答)</div><div class="v" id="v-brainrouter">—</div></div></div></div>
 </div>
 
 <div class="card">
@@ -120,7 +121,7 @@
   <rect x="580" y="58" width="250" height="86" rx="10" fill="#161d2e" stroke="#86efac"/>
   <text x="705" y="80" fill="#86efac" font-size="12" text-anchor="middle">🧠 xiaozhi-server :8000/:8003</text>
   <text x="705" y="98" fill="#94a3b8" font-size="10" text-anchor="middle">VAD(Silero) → 耳(FunASR 本地)</text>
-  <text x="705" y="114" fill="#94a3b8" font-size="10" text-anchor="middle">→ 想(LLM) → 声(EdgeTTS 云希)</text>
+  <text x="705" y="114" fill="#94a3b8" font-size="10" text-anchor="middle">→ brain-router(:4001 异步总线) → 声(EdgeTTS)</text>
   <text x="705" y="130" fill="#94a3b8" font-size="10" text-anchor="middle">OTA 接口 · 视觉接口 · MCP 桥</text>
 
   <rect x="580" y="158" width="250" height="64" rx="10" fill="#161d2e" stroke="#a5b4fc"/>
@@ -200,6 +201,9 @@ async function refresh(){
     const d = await r.json();
     $('apierr').textContent = '';
     setDot('openclaw', (d.openclaw||{}).reachable ?? null);
+    const br = d.brainrouter||{};
+    setDot('brainrouter', br.ok ?? null);
+    $('v-brainrouter').textContent = br.ok ? (br.background_jobs>0 ? `在忙 (${br.background_jobs} 个后台任务)` : '空闲') : '不可达';
     $('v-openclaw').textContent = (d.openclaw||{}).reachable ? '在线 (peering)' : '不可达';
     for (const k of ['xiaozhi','litellm','goserver','watcher']) {
       setDot(k, d.services[k].active);

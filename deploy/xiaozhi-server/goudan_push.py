@@ -85,6 +85,11 @@ async def _say(request: web.Request) -> web.Response:
         return web.json_response({"error": "device not connected", "known": list(_conns)}, status=404)
 
     try:
+        # 防回音/插嘴: 设备正在说话或在听用户说话时, 等一会儿再播 (最多 30s)
+        for _ in range(60):
+            if not getattr(conn, "client_is_speaking", False):
+                break
+            await asyncio.sleep(0.5)
         # 关键: 设备只在收到 tts start 后进入 Speaking 态才播放音频 (application.cc OnIncomingJson)
         await send_tts_message(conn, "start")
         # 完整播报流程 (同 intent 语音指令): FIRST 引导帧 → 正文 → LAST 收尾

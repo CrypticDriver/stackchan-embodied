@@ -22,6 +22,8 @@ SERVICES = {
     "xiaozhi": "stackchan-xiaozhi",
     "goserver": "stackchan-goserver",
     "watcher": "stackchan-watcher",
+    "brainrouter": "stackchan-brainrouter",
+    "console": "stackchan-console",
 }
 
 
@@ -107,6 +109,15 @@ def sessions_overview() -> dict:
         return {"error": str(e)}
 
 
+def brainrouter_status() -> dict:
+    out = _run(["curl", "-s", "-m", "3", "http://127.0.0.1:4001/health"], timeout=5)
+    try:
+        d = json.loads(out)
+        return {"ok": bool(d.get("ok")), "background_jobs": d.get("background_jobs", 0)}
+    except Exception:  # noqa: BLE001
+        return {"ok": False, "background_jobs": 0}
+
+
 def openclaw_status() -> dict:
     """小狗蛋本体 (us-west-2 OpenClaw gateway, VPC peering) 健康检查。"""
     out = _run(["curl", "-s", "-m", "4", "-o", "/dev/null", "-w", "%{http_code}",
@@ -138,6 +149,7 @@ async def status(request: web.Request) -> web.Response:
         "device": device_activity(),
         "watcher": watcher_status(),
         "openclaw": openclaw_status(),
+        "brainrouter": brainrouter_status(),
         "cc_sessions": sessions_overview(),
         "host": host_status(),
     }, headers={"Cache-Control": "no-store"})

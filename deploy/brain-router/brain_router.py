@@ -21,7 +21,20 @@ UPSTREAM = os.environ.get("OPENCLAW_URL", "http://10.0.1.80:18790/v1/chat/comple
 UPSTREAM_TOKEN = os.environ["OPENCLAW_TOKEN"]
 PUSH_URL = os.environ.get("PUSH_URL", "http://127.0.0.1:9101/goudan/say")
 INLINE_WAIT = float(os.environ.get("INLINE_WAIT", "8"))
-HOLD_LINE = "稍等，这个我得去查查，弄好了叫你。"
+HOLD_LINES = [
+    "稍等，这个我得去查查，弄好了叫你。",
+    "这事儿得花点功夫，我去办，好了喊你。",
+    "收到，我这就去弄，你先忙。",
+    "让我查查啊，一会儿给你信儿。",
+]
+_hold_idx = 0
+
+
+def next_hold_line() -> str:
+    global _hold_idx
+    line = HOLD_LINES[_hold_idx % len(HOLD_LINES)]
+    _hold_idx += 1
+    return line
 
 _background: set[asyncio.Task] = set()
 
@@ -75,7 +88,7 @@ async def chat(request: web.Request) -> web.StreamResponse:
         answered_inline = True
     except asyncio.TimeoutError:
         answered_inline = False
-        content = HOLD_LINE
+        content = next_hold_line()
 
         async def _finish():
             try:
