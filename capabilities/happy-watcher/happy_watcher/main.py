@@ -85,6 +85,36 @@ def speak(event: RobotEvent, fake: bool) -> None:
         print("  push error:", e, flush=True)
 
 
+
+
+def start_work_query_api(poller):
+    """只读工作状态查询 API (us-east 本机, 有 Happy 凭据)。
+    check_work 工具经 peering 调它, 而不是自己解密 (凭据只在 us-east)。"""
+    import threading, json as _json
+    from http.server import BaseHTTPRequestHandler, HTTPServer
+
+    class H(BaseHTTPRequestHandler):
+        def log_message(self, *a): pass
+        def do_GET(self):
+            try:
+                snaps = poller.fetch()
+                running = [s.title for s in snaps if s.state.value == "running"]
+                pending = poller.pending_requests()
+                body = _json.dumps({
+                    "pending": [{"title": r["title"], "tool": r["tool"],
+                                 "command": r["command"][:80]} for r in pending],
+                    "running": running,
+                }, ensure_ascii=False).encode()
+                self.send_response(200); self.send_header("Content-Type","application/json")
+                self.end_headers(); self.wfile.write(body)
+            except Exception as e:
+                self.send_response(500); self.end_headers(); self.wfile.write(str(e).encode())
+
+    def run():
+        HTTPServer(("0.0.0.0", 9102), H).serve_forever()
+    threading.Thread(target=run, daemon=True).start()
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--fake", action="store_true", help="只打印, 不让设备说话")
@@ -94,8 +124,10 @@ def main() -> None:
     server = os.environ.get("HAPPY_SERVER_URL", "https://d2nkikyt4i91kk.cloudfront.net")
     quiet_spec = os.environ.get("QUIET_HOURS", "")
 
+    state_path = os.environ.get("WATCHER_STATE", "/home/ec2-user/.happy/goudan-watcher-state.json")
     poller = HappyPoller(server)
-    watcher = Watcher()
+    start_work_query_api(poller)
+    watcher = Watcher(state_path=state_path)
     print(f"happy-watcher up: server={server} interval={args.interval}s fake={args.fake}", flush=True)
 
     while True:

@@ -46,13 +46,39 @@ _RULES: dict[SessionState, tuple[str, str | None]] = {
 
 @dataclass
 class Watcher:
-    """同一 session 同一状态只提醒一次；批量变化合并。"""
+    """同一 session 同一状态只提醒一次；批量变化合并。
+
+    状态持久化: 传 state_path 则把 _last 落盘, 扛住进程重启不重放
+    (否则每次重启所有 session 都"首次观察"刷屏)。
+    """
 
     quiet: bool = False   # 安静时段: 只表情不出声
+    state_path: str | None = None
     _last: dict[str, SessionState] = field(default_factory=dict)
+    _primed: bool = False
+
+    def __post_init__(self):
+        if self.state_path:
+            try:
+                import json
+                raw = json.load(open(self.state_path))
+                self._last = {k: SessionState(v) for k, v in raw.items()}
+                self._primed = True   # 有历史 = 非首次启动, 不静默
+            except Exception:
+                self._last = {}
+
+    def _persist(self):
+        if not self.state_path:
+            return
+        try:
+            import json
+            json.dump({k: v.value for k, v in self._last.items()}, open(self.state_path, "w"))
+        except Exception:
+            pass
 
     def observe(self, snapshots: Iterable[SessionSnapshot]) -> list[RobotEvent]:
         events: list[RobotEvent] = []
+        first_run = not self._primed and not self._last
         for snap in snapshots:
             if self._last.get(snap.session_id) == snap.state:
                 continue
@@ -64,6 +90,11 @@ class Watcher:
                 if snap.detail:
                     speak += "，" + _short(snap.detail, 14)
             events.append(RobotEvent(kind, speak, snap.session_id))
+        self._primed = True
+        self._persist()
+        # 冷启动(无持久化历史)时静默 warm-up: 记录状态但不播报存量, 只播后续变化
+        if first_run:
+            return [e for e in events if e.speak is None]  # 只保留表情类, 吞掉存量播报
         return _merge(events)
 
 
