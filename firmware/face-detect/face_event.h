@@ -104,9 +104,13 @@ private:
         avatar.removeDecorator(_heart_decorator_id);
         _heart_decorator_id = avatar.addDecorator(
             std::make_unique<avatar::HeartDecorator>(lv_screen_active(), _greet_duration_ms, 500));
-        // 本地问候音: 云希声 (与狗蛋对话同音色) 随机播一句中文问候, 不经大脑, 瞬时且稳
+        // 本地问候音兜底: 云希声随机一句中文问候, 秒响、不依赖大脑, 保证一定有反应
         int idx = Random::getInstance().getInt(0, OGG_GREETS_COUNT - 1);
         hal_bridge::app_play_sound(OGG_GREETS[idx]);
+        // 大脑加料: 同时让设备主动发起一轮对话, 大脑生成一句更应景的问候跟上
+        // (待机时才触发; 大脑抽风也无妨, 上面本地音已兜底不会冷场)
+        hal_bridge::trigger_face_greeting(
+            "(有人靠近了，用一句话热情自然地跟大哥打个招呼，别太长)");
         _restore_at = now + _greet_duration_ms;
     }
 
