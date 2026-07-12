@@ -106,10 +106,30 @@ static void _face_task(void*)
         auto& results = detector->run(img);
         bool  seen    = !results.empty();
 
+        // 选面积最大的人脸 (最靠近的那张), 算中心的归一化坐标 [-100,100]。
+        // 摄像头未镜像, 屏幕对着大哥: 画面里大哥偏右 → 设备该往右看, 故 x 直接用;
+        // 若真机方向反了, 把 face_x 取负即可 (见下方注释)。
+        int face_x = 0, face_y = 0;
+        if (seen) {
+            const dl::detect::result_t* best = nullptr;
+            for (auto& r : results) {
+                if (!best || r.box_area() > best->box_area()) best = &r;
+            }
+            if (best && best->box.size() >= 4) {
+                int cx = (best->box[0] + best->box[2]) / 2;
+                int cy = (best->box[1] + best->box[3]) / 2;
+                // 图像坐标 → [-100,100]; x 取负 = 镜像 (大哥在画面右, 果冻眼往右瞟去"看他")
+                face_x = -(cx * 200 / (gw > 0 ? gw : 1) - 100);
+                face_y = (cy * 200 / (gh > 0 ? gh : 1) - 100);
+                if (face_x < -100) face_x = -100; else if (face_x > 100) face_x = 100;
+                if (face_y < -100) face_y = -100; else if (face_y > 100) face_y = 100;
+            }
+        }
+
         // 每 ~10s 报一次心跳, 确认检测循环在跑 (真机可见)
         if (++loop_count % 20 == 0) {
-            mclog::tagInfo(_tag, "detecting... (loop {}, fmt=0x{:08x}, {}x{}, boxes={})",
-                           loop_count, (unsigned)fmt, gw, gh, (int)results.size());
+            mclog::tagInfo(_tag, "detecting... (loop {}, fmt=0x{:08x}, {}x{}, boxes={}, x={}, y={})",
+                           loop_count, (unsigned)fmt, gw, gh, (int)results.size(), face_x, face_y);
         }
 
         if (seen) {
@@ -123,11 +143,14 @@ static void _face_task(void*)
         if (!face_present && hit_streak >= APPEAR_HITS) {
             face_present = true;
             mclog::tagInfo(_tag, "face APPEAR ({} boxes)", (int)results.size());
-            GetHAL().onFaceEvent.emit(FaceEvent::Appear);
+            GetHAL().onFaceEvent.emit(FaceEvent{FaceEventType::Appear, face_x, face_y});
+        } else if (face_present && seen) {
+            // 持续看到: 发 Track 让眼睛看向人脸
+            GetHAL().onFaceEvent.emit(FaceEvent{FaceEventType::Track, face_x, face_y});
         } else if (face_present && miss_streak >= GONE_MISSES) {
             face_present = false;
             mclog::tagInfo(_tag, "face GONE");
-            GetHAL().onFaceEvent.emit(FaceEvent::Gone);
+            GetHAL().onFaceEvent.emit(FaceEvent{FaceEventType::Gone, 0, 0});
         }
     }
 }
