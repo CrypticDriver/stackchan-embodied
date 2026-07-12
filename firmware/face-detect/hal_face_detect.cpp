@@ -27,8 +27,11 @@ static const std::string_view _tag = "HAL-FACE";
 
 // 检测节奏与去抖 (帧率不必高, "有人在看" 是慢事件)
 static constexpr int   DETECT_PERIOD_MS   = 500;   // 每 0.5s 检测一帧
-static constexpr int   APPEAR_HITS        = 1;     // 连续 1 帧有脸即判定"出现" (灵敏)
-static constexpr int   GONE_MISSES        = 4;     // 连续 4 帧 (~2s) 无脸才判"离开" (防抖)
+static constexpr int   APPEAR_HITS        = 2;     // 连续 2 帧有脸才判"出现" (防单帧误检)
+// 强滞后: 一旦判定有人, 要连续 ~40s 真没脸才算"人离开"。
+// 目的: 大哥坐着不动时检测偶尔漏帧(轻微晃动/光线)不算走, 免得反复 Gone→Appear
+// 触发"又来人了"而反复打招呼。只有真的离开够久, 回来才当"新的一次到访"。
+static constexpr int   GONE_MISSES        = 80;    // 连续 80 帧 (~40s) 无脸才判"离开"
 
 static void _face_task(void*)
 {

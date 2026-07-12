@@ -27,7 +27,7 @@ namespace stackchan {
 
 class FaceEventModifier : public Modifier {
 public:
-    explicit FaceEventModifier(uint32_t greetDurationMs = 2500, uint32_t greetCooldownMs = 20000)
+    explicit FaceEventModifier(uint32_t greetDurationMs = 2500, uint32_t greetCooldownMs = 60000)
         : _greet_duration_ms(greetDurationMs), _greet_cooldown_ms(greetCooldownMs)
     {
         _signal_connection = GetHAL().onFaceEvent.connect([this](FaceEvent event) {
