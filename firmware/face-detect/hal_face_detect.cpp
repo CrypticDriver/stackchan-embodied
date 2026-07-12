@@ -74,7 +74,7 @@ static void _face_task(void*)
             buf = (uint8_t*)heap_caps_malloc(need, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
             buf_cap = buf ? need : 0;
             if (!buf) {
-                mclog::tagError(_tag, "alloc detect buffer failed (%u bytes)", (unsigned)need);
+                mclog::tagError(_tag, "alloc detect buffer failed ({} bytes)", (unsigned)need);
                 continue;
             }
         }
@@ -85,7 +85,7 @@ static void _face_task(void*)
             // 拍照占用中 / 格式不符 / 取帧失败, 下一轮再来。
             // 每 ~10s 报一次连续取帧失败, 便于真机排查 (静默空转最难查)。
             if (++grab_fail % 20 == 0) {
-                mclog::tagWarn(_tag, "GrabForDetect failing (x%d), sensor fmt=0x%08x",
+                mclog::tagWarn(_tag, "GrabForDetect failing (x{}), sensor fmt=0x{:08x}",
                                grab_fail, (unsigned)camera->GetFrameFormat());
             }
             continue;
@@ -108,7 +108,7 @@ static void _face_task(void*)
 
         // 每 ~10s 报一次心跳, 确认检测循环在跑 (真机可见)
         if (++loop_count % 20 == 0) {
-            mclog::tagInfo(_tag, "detecting... (loop %d, fmt=0x%08x, %dx%d, boxes=%d)",
+            mclog::tagInfo(_tag, "detecting... (loop {}, fmt=0x{:08x}, {}x{}, boxes={})",
                            loop_count, (unsigned)fmt, gw, gh, (int)results.size());
         }
 
@@ -122,7 +122,7 @@ static void _face_task(void*)
 
         if (!face_present && hit_streak >= APPEAR_HITS) {
             face_present = true;
-            mclog::tagInfo(_tag, "face APPEAR (%d boxes)", (int)results.size());
+            mclog::tagInfo(_tag, "face APPEAR ({} boxes)", (int)results.size());
             GetHAL().onFaceEvent.emit(FaceEvent::Appear);
         } else if (face_present && miss_streak >= GONE_MISSES) {
             face_present = false;
