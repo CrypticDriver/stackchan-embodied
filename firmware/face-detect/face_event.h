@@ -16,12 +16,12 @@
 #pragma once
 #include "../modifiable.h"
 #include "../avatar/decorators/decorators.h"
+#include "../utils/random.h"
 #include <hal/hal.h>
 #include <hal/board/hal_bridge.h>
-#include <assets/lang_config.h>
+#include <assets/assets.h>
 #include <lvgl.h>
 #include <cstdint>
-#include <cstdlib>
 
 namespace stackchan {
 
@@ -104,8 +104,9 @@ private:
         avatar.removeDecorator(_heart_decorator_id);
         _heart_decorator_id = avatar.addDecorator(
             std::make_unique<avatar::HeartDecorator>(lv_screen_active(), _greet_duration_ms, 500));
-        // 本地问候音 (不经大脑, 瞬时且稳); 设备在待机态也能出声
-        hal_bridge::app_play_sound(Lang::Sounds::OGG_WELCOME);
+        // 本地问候音: 云希声 (与狗蛋对话同音色) 随机播一句中文问候, 不经大脑, 瞬时且稳
+        int idx = Random::getInstance().getInt(0, OGG_GREETS_COUNT - 1);
+        hal_bridge::app_play_sound(OGG_GREETS[idx]);
         _restore_at = now + _greet_duration_ms;
     }
 
