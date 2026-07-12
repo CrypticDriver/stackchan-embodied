@@ -4,7 +4,43 @@
 1. 说完话/告别后，最后一个聊天气泡一直挂着不消失，能挂一整晚
 2. 之后再唤醒，就没法聊天了，只能重启设备
 
-## 源码级根因分析 (待真机串口坐实)
+## ✅ 真机串口坐实 (2026-07-12, stackchan-diag-20260712-121519.log)
+
+抓到 634 行日志, **修正了初始假设**:
+
+- 设备全程在 `speaking ↔ listening` 之间跳, **从未进过 idle**。
+- 静置 **47 分钟** 期间: 只有 `free sram` 心跳, **无 `Websocket disconnected`、
+  无 `Channel timeout`、无任何断连**。连接一直是活的。
+- 47 分钟后一句"哎，狗蛋，我回来了" → 立刻 `listening -> speaking` 正常应答。
+  **现象2 (唤醒卡死) 本次未复现** —— 说明它不是必现, 更像偶发 (某次连接真断/
+  服务端 session 超时清理), 暂缓, 下次真卡死时接线抓串口再定位。
+
+**现象1 (气泡挂整夜+不眨眼) 根因确定, 与"跨区断连收不到回调"无关**:
+狗蛋 `GetDefaultListeningMode()` = AutoStop(AEC 关) / Realtime(AEC 开), **都不是
+ManualStop**。而 `OnIncomingJson` 里 TTS `stop` 后, 只有 ManualStop 才
+`SetDeviceState(Idle)`, AutoStop/Realtime **都回 `Listening`**。
+→ 说完话永远回 listening, 永远不进 idle
+→ `HandleStateChangedEvent` 里进 idle 才做的 `ClearChatMessages()` 永不触发
+→ **气泡永久挂着**; 待机眨眼动画也只在 idle 跑 → **不眨眼**。
+
+## 修复 (已实现, 已编译+宿主验证, 待刷机)
+
+**方案: listening 态空闲超时自动回待机** (application.cc)
+- 新增 `listening_idle_ticks_`; clock tick (每秒) 里若 `Listening` 且
+  `!IsVoiceDetected()` 则累加, 达 `kListeningIdleTimeoutSeconds=30` 秒 →
+  收链 + 清气泡 + `SetDeviceState(Idle)` (显式做全套清理, 不裸依赖
+  `~WebSocket` 的析构回调时序)。
+- VAD 检测到语音 / 任何状态切换 → 计数清零。Speaking 态不计。
+- 效果: 说完话没人接话 30 秒 → 自动回待机 (气泡消失、恢复眨眼、需重新唤醒)。
+
+宿主验证: `firmware/host-verify/idle_timeout_test.cpp` 复刻状态机, 5 场景全过
+(静默30s回idle / 中途说话清零 / Speaking不超时 / 持续说话不超时 / 回idle后不重触发)。
+
+---
+## (存档) 初始源码级推断 (部分被日志推翻)
+
+> 曾推断两现象同源于"设备守着被中间层掐断的 WS"。日志证明静置期间连接未断,
+> 现象1 实为监听模式设计所致 (见上)。保留以备现象2 复现时参考跨区断连方向。
 
 两个现象是**同一根因**: 设备端守着一条已经名存实亡的 WebSocket 不放，
 状态机停在非 Idle 态。
