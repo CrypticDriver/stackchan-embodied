@@ -21,6 +21,7 @@
 
 #include "human_face_detect.hpp"
 #include "dl_image_define.hpp"
+#include "linux/videodev2.h"   // V4L2_PIX_FMT_RGB565 / YUYV / YUV422P
 
 static const std::string_view _tag = "HAL-FACE";
 
@@ -53,6 +54,8 @@ static void _face_task(void*)
     bool face_present = false;
     int  hit_streak   = 0;
     int  miss_streak  = 0;
+    int  grab_fail    = 0;   // 连续取帧失败计数 (诊断静默空转)
+    int  loop_count   = 0;   // 检测循环心跳计数
 
     while (1) {
         vTaskDelay(pdMS_TO_TICKS(DETECT_PERIOD_MS));
@@ -77,18 +80,37 @@ static void _face_task(void*)
         }
 
         int gw = 0, gh = 0;
-        if (!camera->GrabForDetect(buf, buf_cap, gw, gh)) {
-            continue;  // 拍照占用中 / 非 RGB565 / 取帧失败, 下一轮再来
+        uint32_t fmt = 0;
+        if (!camera->GrabForDetect(buf, buf_cap, gw, gh, fmt)) {
+            // 拍照占用中 / 格式不符 / 取帧失败, 下一轮再来。
+            // 每 ~10s 报一次连续取帧失败, 便于真机排查 (静默空转最难查)。
+            if (++grab_fail % 20 == 0) {
+                mclog::tagWarn(_tag, "GrabForDetect failing (x%d), sensor fmt=0x%08x",
+                               grab_fail, (unsigned)camera->GetFrameFormat());
+            }
+            continue;
         }
+        grab_fail = 0;
 
         dl::image::img_t img;
-        img.data     = buf;
-        img.width    = (uint16_t)gw;
-        img.height   = (uint16_t)gh;
-        img.pix_type = dl::image::DL_IMAGE_PIX_TYPE_RGB565LE;
+        img.data   = buf;
+        img.width  = (uint16_t)gw;
+        img.height = (uint16_t)gh;
+        // 按相机实际输出选 esp-dl 像素类型 (RGB565 小端 / YUYV)
+        if (fmt == V4L2_PIX_FMT_YUYV || fmt == V4L2_PIX_FMT_YUV422P) {
+            img.pix_type = dl::image::DL_IMAGE_PIX_TYPE_YUYV;
+        } else {
+            img.pix_type = dl::image::DL_IMAGE_PIX_TYPE_RGB565LE;
+        }
 
         auto& results = detector->run(img);
         bool  seen    = !results.empty();
+
+        // 每 ~10s 报一次心跳, 确认检测循环在跑 (真机可见)
+        if (++loop_count % 20 == 0) {
+            mclog::tagInfo(_tag, "detecting... (loop %d, fmt=0x%08x, %dx%d, boxes=%d)",
+                           loop_count, (unsigned)fmt, gw, gh, (int)results.size());
+        }
 
         if (seen) {
             hit_streak++;

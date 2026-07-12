@@ -54,10 +54,12 @@ public:
     virtual bool Capture() override;
     bool StreamCaptures();
 
-    // 静默取一帧原始 RGB565 供本地推理 (无快门音、无 JPEG 编码、无旋转)。
+    // 静默取一帧原始像素供本地推理 (无快门音、无 JPEG 编码、无旋转)。
+    // 支持 RGB565 与 YUYV(YUV422) —— 二者都是 2 字节/像素, esp-dl 均原生支持。
+    // out_fmt 回填实际 V4L2 像素格式 (调用方据此选 esp-dl 的 pix_type)。
     // dst 由调用方预分配 (至少 GetFrameWidth()*GetFrameHeight()*2 字节);
     // 与 Capture() 争同一 V4L2 buffer 时 try_lock 失败即返回 false, 绝不阻塞拍照。
-    bool GrabForDetect(uint8_t* dst, size_t dst_cap, int& out_w, int& out_h);
+    bool GrabForDetect(uint8_t* dst, size_t dst_cap, int& out_w, int& out_h, uint32_t& out_fmt);
 
     // 翻转控制函数
     virtual bool SetHMirror(bool enabled) override;
